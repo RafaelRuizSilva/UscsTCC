@@ -10,11 +10,11 @@ class OrientadorRepository:
 
         try:
             query = """
-            INSERT INTO tb_cadastro_orientador (nome_completo, email, cpf, id_curso, senha_hash)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO tb_cadastro_orientador (nome_completo, email, cpf, senha_hash)
+            VALUES (%s, %s, %s, %s)
             """
             cursor.execute(query, (orientador.nome_completo.lower(), orientador.email,
-                                   orientador.cpf, orientador.id_curso, orientador.senha_hash))
+                                   orientador.cpf, orientador.senha_hash))
             self.db_conn.commit()
             return cursor.lastrowid
 

@@ -12,7 +12,6 @@ class Orientador(BaseModel):
         description="CPF no formato xxx.xxx.xxx-xx ou como 11 dígitos"
     )
 
-    id_curso: int
     senha: constr(min_length=6)
 
     @property

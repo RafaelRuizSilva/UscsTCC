@@ -41,7 +41,7 @@ def login_orientador(form_data: OAuth2PasswordRequestForm = Depends(), db=Depend
     senha = form_data.password
 
     cursor = db.cursor()
-    cursor.execute("SELECT id_aluno, senha_hash FROM tb_cadastro_orientador WHERE email = %s", (email,))
+    cursor.execute("SELECT id_orientador, senha_hash FROM tb_cadastro_orientador WHERE email = %s", (email,))
     result = cursor.fetchone()
 
     if not result:
