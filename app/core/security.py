@@ -2,8 +2,12 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
 from app.configs import settings  # pegar SECRET_KEY do settings
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -37,3 +41,20 @@ def verificar_token(token: str):
         raise ValueError("Token expirado")
     except jwt.PyJWTError:
         raise ValueError("Token inválido")
+
+def get_current_user(role_esperado: str):
+    def _dependency(token: str = Depends(oauth2_scheme)):
+        try:
+            payload = verificar_token(token)
+            role = payload.get("role")
+            user_id = payload.get("sub")
+
+            if role != role_esperado:
+                raise HTTPException(status_code=403, detail="Acesso negado ao tipo de usuário")
+
+            return user_id  # ou return payload se quiser o pacote completo
+
+        except ValueError as e:
+            raise HTTPException(status_code=401, detail=str(e))
+
+    return _dependency

@@ -23,3 +23,11 @@ class ProjetoRepository:
             error_msg = str(err).lower()
             if "foreign key constraint fails" in error_msg:
                 raise ValueError("ID do orientador e/ou ID do campus inválido(s).")
+
+    def deletar_por_id(self, id_projeto: int):
+        cursor = self.db_conn.cursor()
+        query = "DELETE FROM tb_novo_projeto WHERE id_projeto = %s"
+        cursor.execute(query, (id_projeto,))
+        self.db_conn.commit()
+        if cursor.rowcount == 0:
+            raise ValueError("Projeto não encontrado.")

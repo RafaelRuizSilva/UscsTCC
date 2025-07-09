@@ -5,6 +5,9 @@ from app.adapters.web.aluno_controller import router as aluno_controller
 from app.adapters.web.auth_controller import router as auth_controller
 from app.adapters.web.orientador_controller import router as orientador_controller
 from app.adapters.web.projeto_controller import router as projeto_controller
+from app.adapters.web.inscricao_controller import router as inscricao_controller
+from app.adapters.web.relatorio_controller import router as relatorio_controller
+
 
 import uvicorn
 
@@ -18,5 +21,9 @@ app.include_router(aluno_controller)
 app.include_router(auth_controller)
 app.include_router(orientador_controller)
 app.include_router(projeto_controller)
+app.include_router(inscricao_controller)
+app.include_router(relatorio_controller)
+
+
 
 uvicorn.run(app, host='localhost', port=8001)

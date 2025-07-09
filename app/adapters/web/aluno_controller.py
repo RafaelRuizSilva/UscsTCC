@@ -3,6 +3,7 @@ from app.core.models.aluno import Aluno
 from app.adapters.repositories.aluno_repository import AlunoRepository
 from app.core.use_cases.create_aluno_usecase import CreateAlunoUseCase
 from app.dependencies import get_db_conn
+from app.core.security import get_current_user
 
 router = APIRouter(prefix="/alunos", tags=["Alunos"])
 
@@ -17,5 +18,10 @@ def cadastrar_aluno(aluno: Aluno, db=Depends(get_db_conn)):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Erro inesperado")
+
+# --- Exemplo de rota protegida ---
+@router.get("/painel-aluno")
+def me(user_id: int = Depends(get_current_user("aluno"))):
+    return {"msg": f"Aluno autenticado: ID {user_id}"}
 
 
