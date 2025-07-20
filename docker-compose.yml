@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"     # Porta AMQP (comunicação entre serviços)
+      - "15672:15672"   # Porta do painel web
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: db_uscs_ic
+      MYSQL_ROOT_PASSWORD: 1404
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+
+  api:
+    build: .
+    container_name: fastapi_app
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    volumes:
+      - .:/app
+    working_dir: /app  # importante para executar no contexto correto
+    ports:
+      - "8001:8001"
+    depends_on:
+      - db
+      - rabbitmq
+
+  worker_notificacao:
+    build: .
+    container_name: notificacao_worker
+    command: python app/adapters/workers/notificacao_consumer.py
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      - rabbitmq
+      - db
+
+volumes:
+  db_data:

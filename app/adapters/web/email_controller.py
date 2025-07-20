@@ -1,19 +1,32 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from app.core.use_cases.envia_emails import EnviaEmailUseCase
 from app.adapters.email.smtp_email_remetente import SmtpEmailRemetente
-from app.core.models.email_payload import EmailBase64Payload
-import base64
+from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.post("/send-emails-base64")
-def send_emails_base64(payload: EmailBase64Payload):
+class EmailResponse(BaseModel):
+    success: bool
+    message: str
+    data: dict | None = None
+
+
+@router.post("/send-emails",
+             response_model=EmailResponse,
+             responses = {
+                200: {"description": "E-mails enviados com sucesso"},
+                400: {"description": "Arquivo inválido ou mal formatado"},
+                500: {"description": "Erro interno no servidor"},
+             })
+async def send_emails(file: UploadFile = File(...)):
     try:
-        arquivo_em_bytes = base64.b64decode(payload.arquivo_base64)
+        if not file.filename.endswith('.xlsx'):
+            raise HTTPException(status_code=400,
+                                detail='Formato de arquivo inválido. Envie um arquivo excel (.xlsx).')
 
         use_case = EnviaEmailUseCase(email_sender=SmtpEmailRemetente())
-        qtd_emails_enviados = use_case.execute(arquivo_em_bytes)
+        qtd_emails_enviados = use_case.execute(file)
 
         return JSONResponse(
             status_code=200,
@@ -23,5 +36,10 @@ def send_emails_base64(payload: EmailBase64Payload):
                 "data": {"quantidade_enviada": qtd_emails_enviados}
             }
         )
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno: {str(e)}"
+        )

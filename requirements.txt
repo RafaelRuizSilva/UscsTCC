@@ -1,3 +1,6 @@
+PyJWT==2.8.0
+cryptography>=41.0.0
+passlib[bcrypt]
 annotated-types==0.7.0
 anyio==4.9.0
 certifi==2025.4.26
@@ -51,3 +54,7 @@ tzdata==2025.2
 uvicorn==0.34.2
 watchfiles==1.0.5
 websockets==15.0.1
+pika
+pymysql
+
+

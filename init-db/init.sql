@@ -1,4 +1,4 @@
-CREATE DATABASE db_uscs_ic;
+CREATE DATABASE IF NOT EXISTS db_uscs_ic;
 
 USE db_uscs_ic;
 
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_aluno (
     id_curso INT NOT NULL,
     senha_hash VARCHAR(255) NOT NULL,
     FOREIGN KEY (id_curso)
-        REFERENCES tb_curso(id_ctb_campusurso)
+        REFERENCES tb_curso(id_curso)
         ON DELETE CASCADE
 );
 
@@ -46,6 +46,26 @@ CREATE TABLE IF NOT EXISTS tb_projeto_aluno (
     id_projeto INT,
     id_aluno INT,
     PRIMARY KEY (id_projeto, id_aluno),
-    FOREIGN KEY (id_projeto) REFERENCES tb_novo_projeto(id_projeto) ON DELETE CASCADE,
+    FOREIGN KEY tb_projeto_aluno(id_projeto) REFERENCES tb_novo_projeto(id_projeto) ON DELETE CASCADE,
     FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS TB_AVALIADOR_EXTERNO (
+    id_avaliador INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    especialidade VARCHAR(100),
+    subespecialidade VARCHAR(100),
+    link_lattes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tb_notificacao (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo VARCHAR(100) NOT NULL,
+    mensagem TEXT NOT NULL,
+    destinatario VARCHAR(100) NOT NULL,
+    lida BOOLEAN DEFAULT FALSE,
+    data_criacao DATETIME NOT NULL
+);
+
+
