@@ -55,7 +55,7 @@ def update_alunos_projeto(
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @router.get("/")
-def get_cursos(db=Depends(get_db_conn)):
+def get_projetos(db=Depends(get_db_conn)):
     repo = ProjetoRepository(db)
     projetos = repo.get_all()
     return {"projetos": projetos}
