@@ -1,9 +1,8 @@
-from app.core.models.aluno import Aluno
 from app.core.ports.output.porta_aluno_repository import IAlunoRepository
 
-class CreateAlunoUseCase:
+class ListAlunosUseCase:
     def __init__(self, repo: IAlunoRepository) -> None:
         self._repo = repo
 
-    def execute(self, aluno: Aluno) -> int:
-        return self._repo.create(aluno)
+    def execute(self) -> list[dict]:
+        return self._repo.list_all()
