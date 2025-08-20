@@ -16,10 +16,6 @@ __author__ = 'Rafael Ruiz da Silva 22/05/2025'
 
 app = FastAPI()
 
-@app.get('/')
-def root():
-    return {'message': 'Olá, você está no Docker'}
-
 app.include_router(email_router)
 app.include_router(curso_controller)
 app.include_router(aluno_controller)

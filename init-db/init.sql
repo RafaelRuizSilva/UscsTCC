@@ -43,9 +43,10 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
 );
 
 CREATE TABLE IF NOT EXISTS tb_projeto_aluno (
-    id_projeto INT,
-    id_aluno INT,
-    PRIMARY KEY (id_projeto, id_aluno),
+    id_inscricao INT AUTO_INCREMENT PRIMARY KEY,
+    id_aluno INT NOT NULL,                         
+    id_projeto INT NOT NULL,                       
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY tb_projeto_aluno(id_projeto) REFERENCES tb_novo_projeto(id_projeto) ON DELETE CASCADE,
     FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno) ON DELETE CASCADE
 );
