@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.models.projeto import Projeto
 from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.core.use_cases.create_projeto_usecase import CreateProjetoUseCase
@@ -8,9 +8,26 @@ from app.adapters.repositories.atualiza_aluno_projeto_repository import ProjetoG
 from app.core.security import get_current_user
 from app.core.models.upd_aluno_projeto_model import UpdateProjetoAlunosDTO
 from app.core.use_cases.atualizar_alunos_projeto import UpdateProjetoAlunosUseCase
+from app.core.use_cases.listar_projetos_por_orientador_usecase import ListarProjetosPorOrientadorUseCase  # ✅
 
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
+
+@router.get("/me")
+def get_meus_projetos(
+    db=Depends(get_db_conn),
+    orientador_id: int = Depends(get_current_user("orientador")),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """
+    Lista projetos do orientador autenticado (paginável).
+    Retorna {"projetos": [...]} no mesmo shape do get_all().
+    """
+    repo = ProjetoRepository(db)
+    usecase = ListarProjetosPorOrientadorUseCase(repo)
+    projetos = usecase.execute(orientador_id, limit=limit, offset=offset)
+    return {"projetos": projetos}
 
 @router.post("/")
 def cadastrar_projeto(projeto: Projeto, db=Depends(get_db_conn)):
