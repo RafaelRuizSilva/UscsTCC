@@ -82,5 +82,14 @@ CREATE TABLE IF NOT EXISTS tb_relatorio_mensal (
   CONSTRAINT fk_rm_orientador FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador)
 );
 
+CREATE TABLE IF NOT EXISTS tb_cadastro_secretaria (
+  id_secretaria INT AUTO_INCREMENT PRIMARY KEY,
+  nome_completo VARCHAR(255) NOT NULL,
+  email         VARCHAR(255) NOT NULL UNIQUE,
+  cpf           VARCHAR(14)  NOT NULL UNIQUE,
+  senha_hash    VARCHAR(255) NOT NULL
+);
+
+
 
 
