@@ -10,6 +10,7 @@ from app.adapters.web.relatorio_controller import router as relatorio_controller
 from app.adapters.web.avaliador_externo_controller import router as avaliador_externo_controller
 from app.adapters.web.notificacao_controller import router as notificacao_controller
 from app.adapters.web.campus_controller import router as campus_controller
+from app.adapters.web.relatorio_mensal_controller import router as rel_mensal
 import uvicorn
 
 __author__ = 'Rafael Ruiz da Silva 22/05/2025'
@@ -27,5 +28,6 @@ app.include_router(relatorio_controller)
 app.include_router(avaliador_externo_controller)
 app.include_router(notificacao_controller)
 app.include_router(campus_controller)
+app.include_router(rel_mensal)
 #uvicorn.run(app, host='localhost', port=8001)
 #uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
