@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_aluno (
     email VARCHAR(255) UNIQUE NOT NULL,
     cpf VARCHAR(14) UNIQUE,
     id_curso INT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
     senha_hash VARCHAR(255) NOT NULL,
     FOREIGN KEY (id_curso)
         REFERENCES tb_curso(id_curso)

@@ -19,3 +19,11 @@ class IProjetoRepository(ABC):
         [{ "id_projeto": int, "titulo_projeto": str, "resumo": str, "orientador": str, "campus": str }]
         """
         pass
+
+        # ✅ NOVOS
+
+    @abstractmethod
+    def listar_alunos_por_projeto(self, id_projeto: int) -> List[Dict]: ...
+
+    @abstractmethod
+    def pertence_ao_orientador(self, id_projeto: int, id_orientador: int) -> bool: ...

@@ -11,12 +11,27 @@ from app.core.use_cases.create_aluno_usecase import CreateAlunoUseCase
 from app.core.use_cases.list_alunos_usecase import ListAlunosUseCase
 from app.core.use_cases.delete_alunos_usecase import DeleteAlunoUseCase
 from app.core.use_cases.get_aluno_usecase import GetAlunoByIdUseCase
+from app.core.use_cases.aprovar_aluno_usecase import AprovarAlunoUseCase
 
 router = APIRouter(prefix="/alunos", tags=["Alunos"])
 
 # DI mínima do repo
 def get_repo(db=Depends(get_db_conn)) -> IAlunoRepository:
     return AlunoRepository(db)
+
+@router.put("/{aluno_id}/aprovar", status_code=status.HTTP_200_OK)
+def aprovar_aluno(
+    aluno_id: int,
+    repo: Annotated[IAlunoRepository, Depends(get_repo)],
+):
+    uc = AprovarAlunoUseCase(repo)
+    try:
+        uc.execute(aluno_id)
+        return {"mensagem": "Aluno aprovado com sucesso"}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao aprovar aluno")
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def cadastrar_aluno(

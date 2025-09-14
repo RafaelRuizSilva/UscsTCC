@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from app.core.models.projeto import Projeto
 from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.core.use_cases.create_projeto_usecase import CreateProjetoUseCase
@@ -76,3 +76,20 @@ def get_projetos(db=Depends(get_db_conn)):
     repo = ProjetoRepository(db)
     projetos = repo.get_all()
     return {"projetos": projetos}
+
+@router.get("/{id_projeto}/alunos")
+def listar_alunos_do_projeto(
+    id_projeto: int = Path(..., ge=1),
+    db=Depends(get_db_conn),
+):
+    """
+    Retorna todos os alunos vinculados ao projeto informado.
+    Sem necessidade de autenticação.
+    """
+    try:
+        repo = ProjetoRepository(db)
+        alunos = repo.listar_alunos_por_projeto(id_projeto)
+        return {"id_projeto": id_projeto, "alunos": alunos}  # [] se não houver vínculos
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro inesperado ao listar alunos do projeto")
+

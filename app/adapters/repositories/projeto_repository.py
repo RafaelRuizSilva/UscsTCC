@@ -74,3 +74,33 @@ class ProjetoRepository:
                      "orientador": row[3], "campus": row[4]} for row in rows]
         finally:
             cursor.close()
+
+    def listar_alunos_por_projeto(self, id_projeto: int) -> List[Dict]:
+        """
+        Retorna os alunos vinculados ao projeto no shape:
+        [{ "id": int, "nome_completo": str, "email": str, "cpf": str, "id_curso": int }]
+        """
+        cursor = self.db_conn.cursor()
+        try:
+            query = """
+                SELECT a.id_aluno, a.nome_completo, a.email, a.cpf, a.id_curso
+                FROM tb_projeto_aluno pa
+                JOIN tb_cadastro_aluno a ON a.id_aluno = pa.id_aluno
+                WHERE pa.id_projeto = %s 
+                AND a.status = 'APROVADO'
+                ORDER BY a.nome_completo ASC
+            """
+            cursor.execute(query, (id_projeto,))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "nome_completo": r[1],
+                    "email": r[2],
+                    "cpf": r[3],
+                    "id_curso": r[4],
+                }
+                for r in rows
+            ]
+        finally:
+            cursor.close()

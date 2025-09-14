@@ -13,3 +13,7 @@ class IAlunoRepository(ABC):
 
     @abstractmethod
     def delete(self, aluno_id: int) -> None: ...
+
+    # ✅ NOVO
+    @abstractmethod
+    def update_status(self, aluno_id: int, novo_status: str) -> None: ...
