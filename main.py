@@ -12,6 +12,7 @@ from app.adapters.web.notificacao_controller import router as notificacao_contro
 from app.adapters.web.campus_controller import router as campus_controller
 from app.adapters.web.relatorio_mensal_controller import router as rel_mensal
 from app.adapters.web.secretaria_controller import router as secretaria_controller
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 __author__ = 'Rafael Ruiz da Silva 22/05/2025'
@@ -31,5 +32,22 @@ app.include_router(notificacao_controller)
 app.include_router(campus_controller)
 app.include_router(rel_mensal)
 app.include_router(secretaria_controller)
+
+# Defina a lista de origens permitidas
+origins = [
+    "http://localhost:3000",   # se o front estiver em React local
+    "http://127.0.0.1:3000",
+    "http://localhost:4200",   # se Angular
+    "https://meu-frontend.com", # produção
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,          # pode ser ["*"] para liberar geral
+    allow_credentials=True,
+    allow_methods=["*"],            # ou ["GET", "POST", "DELETE", "PUT"]
+    allow_headers=["*"],
+)
+
 #uvicorn.run(app, host='localhost', port=8001)
 #uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
