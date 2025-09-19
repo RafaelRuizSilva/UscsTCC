@@ -10,7 +10,7 @@ from app.core.ports.output.porta_inscricao_repository import IInscricaoRepositor
 from app.dependencies.db import get_db_conn
 from typing import Annotated
 
-router = APIRouter(tags=['Inscrição'])
+router = APIRouter(prefix="/inscricao", tags=['Inscrição'])
 
 def get_repo(db=Depends(get_db_conn)) -> IInscricaoRepository:
     return InscricaoRepository(db)
