@@ -91,6 +91,17 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_secretaria (
   senha_hash    VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tb_password_reset_token (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_type ENUM('aluno','orientador','secretaria') NOT NULL,
+  user_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL UNIQUE,  -- SHA-256 do token
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_type_id (user_type, user_id)
+);
+
 
 
 

@@ -2,6 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.security import verificar_senha, criar_token_acesso, criar_token_refresh, verificar_token
 from app.dependencies.db import get_db_conn
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from app.core.models.auth_reset import ForgotPasswordRequest, ResetPasswordRequest
+from app.adapters.repositories.auth_repository import AuthRepository
+from app.adapters.repositories.password_reset_token_repository import PasswordResetTokenRepository
+from app.adapters.email.smtp_email_sender_reset_password import SmtpEmailSender
+from app.core.use_cases.request_password_reset_usecase import RequestPasswordResetUseCase
+from app.core.use_cases.reset_password_usecase import ResetPasswordUseCase
 
 router = APIRouter()
 
@@ -70,4 +76,40 @@ def refresh_token(refresh_token: str):
         return {"access_token": novo_access_token, "token_type": "bearer"}
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+
+
+# ---------- SOLICITAR REDEFINIÇÃO ----------
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(body: ForgotPasswordRequest, db=Depends(get_db_conn)):
+    auth_repo = AuthRepository(db)
+    token_repo = PasswordResetTokenRepository(db)
+    email_sender = SmtpEmailSender()  # usa suas mesmas credenciais
+
+    uc = RequestPasswordResetUseCase(
+        auth_repo=auth_repo,
+        token_repo=token_repo,
+        email_sender=email_sender,
+        ttl_minutes=60,
+        reset_link_base=None  # ou sua URL do front, ex.: "https://seusite.com/resetar-senha"
+    )
+    uc.execute(body.email)
+    return {"message": "Se o e-mail existir, enviaremos instruções para redefinição."}
+
+# ---------- EFETIVAR REDEFINIÇÃO ----------
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(
+    body: ResetPasswordRequest,
+    db=Depends(get_db_conn),
+):
+    token_repo = PasswordResetTokenRepository(db)
+    auth_repo = AuthRepository(db)
+    uc = ResetPasswordUseCase(token_repo=token_repo, auth_repo=auth_repo)
+    try:
+        uc.execute(token=body.token, nova_senha=body.nova_senha)
+        return {"message": "Senha redefinida com sucesso."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro inesperado ao redefinir senha.")
+
 
