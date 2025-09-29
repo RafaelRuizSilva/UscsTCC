@@ -90,7 +90,7 @@ def forgot_password(body: ForgotPasswordRequest, db=Depends(get_db_conn)):
         token_repo=token_repo,
         email_sender=email_sender,
         ttl_minutes=60,
-        reset_link_base=None  # ou sua URL do front, ex.: "https://seusite.com/resetar-senha"
+        reset_link_base='https://localhost:4200/reset-password'  # ou sua URL do front, ex.: "https://seusite.com/resetar-senha"
     )
     uc.execute(body.email)
     return {"message": "Se o e-mail existir, enviaremos instruções para redefinição."}
