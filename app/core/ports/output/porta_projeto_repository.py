@@ -20,10 +20,21 @@ class IProjetoRepository(ABC):
         """
         pass
 
-        # ✅ NOVOS
-
     @abstractmethod
     def listar_alunos_por_projeto(self, id_projeto: int) -> List[Dict]: ...
 
     @abstractmethod
     def pertence_ao_orientador(self, id_projeto: int, id_orientador: int) -> bool: ...
+
+    # ✅ NOVOS
+    @abstractmethod
+    def update_docx_file(self, id_projeto: int, data: bytes) -> None: ...
+
+    @abstractmethod
+    def update_pdf_file(self, id_projeto: int, data: bytes) -> None: ...
+
+    @abstractmethod
+    def get_docx_file(self, id_projeto: int) -> bytes | None: ...
+
+    @abstractmethod
+    def get_pdf_file(self, id_projeto: int) -> bytes | None: ...

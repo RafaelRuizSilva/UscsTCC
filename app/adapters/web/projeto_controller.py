@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, Response
 from app.core.models.projeto import Projeto
 from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.core.use_cases.create_projeto_usecase import CreateProjetoUseCase
@@ -9,7 +9,8 @@ from app.core.security import get_current_user
 from app.core.models.upd_aluno_projeto_model import UpdateProjetoAlunosDTO
 from app.core.use_cases.atualizar_alunos_projeto import UpdateProjetoAlunosUseCase
 from app.core.use_cases.listar_projetos_por_orientador_usecase import ListarProjetosPorOrientadorUseCase  # ✅
-
+from app.core.use_cases.update_projeto_docx_usecase import UpdateProjetoDocxFileUseCase
+from app.core.use_cases.update_projeto_pdf_usecase import UpdateProjetoPdfFileUseCase
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
@@ -92,4 +93,36 @@ def listar_alunos_do_projeto(
         return {"id_projeto": id_projeto, "alunos": alunos}  # [] se não houver vínculos
     except Exception:
         raise HTTPException(status_code=500, detail="Erro inesperado ao listar alunos do projeto")
+
+@router.put("/{id_projeto}/docx/upload")
+def upload_docx_projeto(id_projeto: int, file: UploadFile = File(...), db=Depends(get_db_conn)):
+    data = file.file.read()
+    if not data or not (file.filename or "").lower().endswith(".docx"):
+        raise HTTPException(400, "Envie um .docx válido")
+    uc = UpdateProjetoDocxFileUseCase(ProjetoRepository(db))
+    uc.execute(id_projeto, data)
+    return {"id_projeto": id_projeto, "mensagem": "DOCX salvo"}
+
+@router.put("/{id_projeto}/pdf/upload")
+def upload_pdf_projeto(id_projeto: int, file: UploadFile = File(...), db=Depends(get_db_conn)):
+    data = file.file.read()
+    if not data or not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(400, "Envie um .pdf válido")
+    uc = UpdateProjetoPdfFileUseCase(ProjetoRepository(db))
+    uc.execute(id_projeto, data)
+    return {"id_projeto": id_projeto, "mensagem": "PDF salvo"}
+
+@router.get("/{id_projeto}/docx")
+def baixar_docx_projeto(id_projeto: int, db=Depends(get_db_conn)):
+    data = ProjetoRepository(db).get_docx_file(id_projeto)
+    if not data: raise HTTPException(404, "DOCX não encontrado")
+    return Response(content=data, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    headers={"Content-Disposition": f'attachment; filename="projeto_{id_projeto}.docx"'})
+
+@router.get("/{id_projeto}/pdf")
+def baixar_pdf_projeto(id_projeto: int, db=Depends(get_db_conn)):
+    data = ProjetoRepository(db).get_pdf_file(id_projeto)
+    if not data: raise HTTPException(404, "PDF não encontrado")
+    return Response(content=data, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="projeto_{id_projeto}.pdf"'})
 

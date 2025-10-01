@@ -5,27 +5,30 @@ class AlunoRepository:
     def __init__(self, db_conn):
         self.db_conn = db_conn
 
-    def create(self, aluno: Aluno) -> int:
+    def create(self, aluno: Aluno, pdf_bytes: bytes) -> int:
         cursor = self.db_conn.cursor()
         try:
             query = """
-            INSERT INTO tb_cadastro_aluno (nome_completo, email, cpf, id_curso, senha_hash, status)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO tb_cadastro_aluno
+                    (nome_completo, email, cpf, id_curso, senha_hash, status, pdf_file)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             cursor.execute(
                 query,
-                (aluno.nome_completo.lower(), aluno.email, aluno.cpf, aluno.id_curso, aluno.senha_hash, "PENDENTE")
+                (
+                    aluno.nome_completo.lower(), aluno.email, aluno.cpf,
+                    aluno.id_curso, aluno.senha_hash, "PENDENTE", pdf_bytes
+                )
             )
             self.db_conn.commit()
             return cursor.lastrowid
-
         except IntegrityError as err:
-            error_msg = str(err).lower()
-            if "duplicate entry" in error_msg and "cpf" in error_msg:
+            msg = str(err).lower()
+            if "duplicate entry" in msg and "cpf" in msg:
                 raise ValueError("CPF já cadastrado.")
-            elif "duplicate entry" in error_msg and "email" in error_msg:
+            elif "duplicate entry" in msg and "email" in msg:
                 raise ValueError("E-mail já cadastrado.")
-            elif "foreign key constraint fails" in error_msg:
+            elif "foreign key constraint fails" in msg:
                 raise ValueError("ID do curso inválido.")
             else:
                 raise
@@ -36,9 +39,10 @@ class AlunoRepository:
         cursor = self.db_conn.cursor()
         try:
             query = """
-                SELECT id_aluno, nome_completo, email, cpf, id_curso, status
-                FROM tb_cadastro_aluno
-                ORDER BY nome_completo ASC
+                SELECT id_aluno, nome_completo, email, cpf, id_curso, status,
+                       IF(pdf_file IS NULL, 0, 1) AS has_pdf
+                  FROM tb_cadastro_aluno
+              ORDER BY nome_completo ASC
             """
             cursor.execute(query)
             rows = cursor.fetchall()
@@ -50,6 +54,7 @@ class AlunoRepository:
                     "cpf": r[3],
                     "id_curso": r[4],
                     "status": r[5],
+                    "has_pdf": bool(r[6]),
                 }
                 for r in rows
             ]
@@ -60,9 +65,10 @@ class AlunoRepository:
         cursor = self.db_conn.cursor()
         try:
             query = """
-                SELECT id_aluno, nome_completo, email, cpf, id_curso, status
-                FROM tb_cadastro_aluno
-                WHERE id_aluno = %s
+                SELECT id_aluno, nome_completo, email, cpf, id_curso, status,
+                       IF(pdf_file IS NULL, 0, 1) AS has_pdf
+                  FROM tb_cadastro_aluno
+                 WHERE id_aluno = %s
             """
             cursor.execute(query, (aluno_id,))
             row = cursor.fetchone()
@@ -75,6 +81,7 @@ class AlunoRepository:
                 "cpf": row[3],
                 "id_curso": row[4],
                 "status": row[5],
+                "has_pdf": bool(row[6]),
             }
         finally:
             cursor.close()
@@ -82,22 +89,29 @@ class AlunoRepository:
     def delete(self, aluno_id: int) -> None:
         cursor = self.db_conn.cursor()
         try:
-            query = "DELETE FROM tb_cadastro_aluno WHERE id_aluno = %s"
-            cursor.execute(query, (aluno_id,))
+            cursor.execute("DELETE FROM tb_cadastro_aluno WHERE id_aluno = %s", (aluno_id,))
             self.db_conn.commit()
             if cursor.rowcount == 0:
                 raise ValueError("Aluno não encontrado.")
         finally:
             cursor.close()
 
-    # ✅ NOVO: atualizar status por id
     def update_status(self, aluno_id: int, novo_status: str) -> None:
         cursor = self.db_conn.cursor()
         try:
-            query = "UPDATE tb_cadastro_aluno SET status = %s WHERE id_aluno = %s"
-            cursor.execute(query, (novo_status, aluno_id))
+            cursor.execute("UPDATE tb_cadastro_aluno SET status = %s WHERE id_aluno = %s", (novo_status, aluno_id))
             self.db_conn.commit()
             if cursor.rowcount == 0:
                 raise ValueError("Aluno não encontrado.")
+        finally:
+            cursor.close()
+
+    # download
+    def get_pdf_by_id(self, aluno_id: int) -> bytes | None:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute("SELECT pdf_file FROM tb_cadastro_aluno WHERE id_aluno = %s", (aluno_id,))
+            row = cursor.fetchone()
+            return row[0] if row and row[0] is not None else None
         finally:
             cursor.close()

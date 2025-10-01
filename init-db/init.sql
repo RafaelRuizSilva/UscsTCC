@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_aluno (
     id_curso INT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
     senha_hash VARCHAR(255) NOT NULL,
+    pdf_file LONGBLOB NOT NULL,
     FOREIGN KEY (id_curso)
         REFERENCES tb_curso(id_curso)
         ON DELETE CASCADE
@@ -39,6 +40,8 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
     resumo VARCHAR(1000) NOT NULL,
     id_orientador int,
     id_campus int,
+    docx_file LONGBLOB default NULL,
+    pdf_file  LONGBLOB default NULL,
 	FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador) ON DELETE SET NULL,
 	FOREIGN KEY (id_campus) REFERENCES tb_campus(id_campus) ON DELETE SET NULL
 );

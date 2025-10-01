@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, Form
 
 from app.dependencies.db import get_db_conn
 from app.adapters.repositories.aluno_repository import AlunoRepository
@@ -35,17 +35,43 @@ def aprovar_aluno(
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def cadastrar_aluno(
-    aluno: Aluno,
-    repo: Annotated[IAlunoRepository, Depends(get_repo)],
+    nome_completo: str = Form(..., min_length=3, max_length=255),
+    email: str = Form(...),
+    cpf: str = Form(...),
+    id_curso: int = Form(...),
+    senha: str = Form(..., min_length=6),
+    pdf: UploadFile = File(...),  # 👈 OBRIGATÓRIO
+    repo: Annotated[IAlunoRepository, Depends(get_repo)] = None,
 ):
-    usecase = CreateAlunoUseCase(repo)
+    # Validações do arquivo
+    fn = (pdf.filename or "").lower()
+    if not fn.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Envie um arquivo .pdf válido.")
+    data = pdf.file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Arquivo PDF vazio.")
+    # Checagem simples de assinatura PDF (%PDF)
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Arquivo enviado não parece ser um PDF válido.")
+
+    # Monta domínio (Pydantic valida cpf/email/senha)
+    aluno = Aluno(
+        nome_completo=nome_completo,
+        email=email,
+        cpf=cpf,
+        id_curso=id_curso,
+        senha=senha,
+    )
+
+    uc = CreateAlunoUseCase(repo)
     try:
-        aluno_id = usecase.execute(aluno)
-        return {"id": aluno_id, "mensagem": "Aluno cadastrado com sucesso"}
+        aluno_id = uc.execute(aluno, data)
+        return {"id": aluno_id, "mensagem": "Aluno cadastrado com sucesso (PDF obrigatório)."}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro inesperado")
+        raise HTTPException(status_code=500, detail="Erro inesperado no cadastro")
+
 
 # --- Exemplo de rota protegida ---
 @router.get("/painel-aluno")
@@ -94,3 +120,16 @@ def excluir_aluno(
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno ao excluir aluno")
 
+@router.get("/{aluno_id}/pdf", status_code=status.HTTP_200_OK)
+def baixar_pdf_aluno(
+    aluno_id: int,
+    repo: Annotated[IAlunoRepository, Depends(get_repo)]
+):
+    data = repo.get_pdf_by_id(aluno_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="PDF não encontrado para este aluno.")
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename=\"aluno_{aluno_id}.pdf\"'}
+    )

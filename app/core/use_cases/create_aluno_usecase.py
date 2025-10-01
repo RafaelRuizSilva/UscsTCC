@@ -5,5 +5,5 @@ class CreateAlunoUseCase:
     def __init__(self, repo: IAlunoRepository) -> None:
         self._repo = repo
 
-    def execute(self, aluno: Aluno) -> int:
-        return self._repo.create(aluno)
+    def execute(self, aluno: Aluno, pdf_bytes: bytes) -> int:
+        return self._repo.create(aluno, pdf_bytes)

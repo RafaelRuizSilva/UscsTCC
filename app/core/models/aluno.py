@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, constr
+from fastapi import UploadFile
 import re
 from app.core.security import gerar_hash_senha
 
@@ -13,6 +14,7 @@ class Aluno(BaseModel):
 
     id_curso: int
     senha: constr(min_length=6)
+
 
     @property
     def senha_hash(self) -> str:
