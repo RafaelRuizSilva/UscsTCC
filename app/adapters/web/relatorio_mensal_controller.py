@@ -6,7 +6,8 @@ from app.adapters.repositories.relatorio_mensal_repository import RelatorioMensa
 from app.core.use_cases.confirmar_relatorio_mensal_usecase import ConfirmarRelatorioMensalUseCase
 from app.core.use_cases.listar_relatorios_do_orientador_por_mes_usecase import ListarRelatoriosDoOrientadorPorMesUseCase
 from app.core.use_cases.listar_pendencias_do_orientador_no_mes_usecase import ListarPendenciasDoOrientadorNoMesUseCase
-from app.core.models.relatorio_mensal import ConfirmarRelatorioMensalDTO, RelatorioMensalOut, PendenciaOut
+from app.core.models.relatorio_mensal import (ConfirmarRelatorioMensalDTO, RelatorioMensalOut, PendenciaOut,
+                                              RelatorioMensalSecretariaOut, PendenciaSecretariaOut)
 from app.dependencies import get_db_conn
 from app.core.security import get_current_user
 from app.adapters.message.rabbit_publisher import RabbitPublisher
@@ -87,3 +88,21 @@ def confirmar_relatorio_mensal(
         raise HTTPException(status_code=403, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Erro inesperado")
+
+@router.get("/relatorios-mensais", response_model=List[RelatorioMensalSecretariaOut])
+def listar_relatorios_secretaria(
+    mes: Optional[str] = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    db=Depends(get_db_conn),
+):
+    mes_ref = _mes_param_to_date(mes)
+    repo = RelatorioMensalRepository(db)
+    return repo.listar_todos_por_mes(mes_ref)
+
+@router.get("/relatorios-mensais/pendentes", response_model=List[PendenciaSecretariaOut])
+def listar_pendentes_secretaria(
+    mes: Optional[str] = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    db=Depends(get_db_conn),
+):
+    mes_ref = _mes_param_to_date(mes)
+    repo = RelatorioMensalRepository(db)
+    return repo.listar_pendentes_por_mes(mes_ref)

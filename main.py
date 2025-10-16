@@ -12,6 +12,10 @@ from app.adapters.web.notificacao_controller import router as notificacao_contro
 from app.adapters.web.campus_controller import router as campus_controller
 from app.adapters.web.relatorio_mensal_controller import router as rel_mensal
 from app.adapters.web.secretaria_controller import router as secretaria_controller
+from app.adapters.web.bolsa_controller import router as bolsa_controller
+from app.adapters.web.projeto_envio_controller import router as projeto_envio_controller
+
+
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -32,6 +36,8 @@ app.include_router(notificacao_controller)
 app.include_router(campus_controller)
 app.include_router(rel_mensal)
 app.include_router(secretaria_controller)
+app.include_router(bolsa_controller)
+app.include_router(projeto_envio_controller)
 
 # Defina a lista de origens permitidas
 origins = [

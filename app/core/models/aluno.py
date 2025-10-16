@@ -13,6 +13,7 @@ class Aluno(BaseModel):
     )
 
     id_curso: int
+    possui_trabalho_remunerado: bool
     senha: constr(min_length=6)
 
 

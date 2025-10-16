@@ -37,15 +37,22 @@ class ProjetoRepository:
         cursor = self.db_conn.cursor()
         query = """
             SELECT A.id_projeto,
-                   A.titulo_projeto,
-                   A.resumo,
-                   B.nome_completo AS orientador,
-                   C.campus,
-                   IF(A.docx_file IS NULL, 0, 1) AS has_docx,  -- 👈 não traz o BLOB
-                   IF(A.pdf_file  IS NULL, 0, 1) AS has_pdf    -- 👈 idem
-              FROM tb_novo_projeto AS A
-         LEFT JOIN tb_cadastro_orientador AS B ON A.id_orientador = B.id_orientador
-         LEFT JOIN tb_campus            AS C ON A.id_campus     = C.id_campus
+                A.titulo_projeto,
+                A.resumo,
+                A.id_orientador,
+                B.nome_completo AS orientador,
+                B.email         AS orientador_email,
+                A.id_campus,
+                C.campus,
+                IF(A.docx_file IS NULL, 0, 1) AS has_docx,
+                IF(A.pdf_file  IS NULL, 0, 1) AS has_pdf,
+                ( 
+                    SELECT COUNT(*) FROM tb_projeto_aluno pa
+                        WHERE pa.id_projeto = A.id_projeto
+                ) AS total_inscritos
+            FROM tb_novo_projeto AS A
+        LEFT JOIN tb_cadastro_orientador AS B ON A.id_orientador = B.id_orientador
+        LEFT JOIN tb_campus            AS C ON A.id_campus     = C.id_campus
         """
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -54,13 +61,18 @@ class ProjetoRepository:
                 "id_projeto": r[0],
                 "titulo_projeto": r[1],
                 "resumo": r[2],
-                "orientador": r[3],
-                "campus": r[4],
-                "has_docx": bool(r[5]),
-                "has_pdf": bool(r[6]),
+                "id_orientador": r[3],
+                "orientador": r[4],
+                "orientador_email": r[5],
+                "id_campus": r[6],
+                "campus": r[7],
+                "has_docx": bool(r[8]),
+                "has_pdf": bool(r[9]),
+                "total_inscritos": int(r[10] or 0),  # 👈 agora existe
             }
             for r in rows
         ]
+
 
     def listar_por_orientador(self, id_orientador: int, limit: int = 100, offset: int = 0) -> List[Dict]:
         cursor = self.db_conn.cursor()
@@ -154,3 +166,19 @@ class ProjetoRepository:
             return row[0] if row and row[0] is not None else None
         finally:
             c.close()
+
+    def get_meta_e_pdf(self, id_projeto: int):
+        cur = self.db_conn.cursor()
+        try:
+            cur.execute("""
+                SELECT titulo_projeto, pdf_file
+                  FROM tb_novo_projeto
+                 WHERE id_projeto = %s
+                 LIMIT 1
+            """, (id_projeto,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            return {"titulo": row[0], "pdf": row[1]}
+        finally:
+            cur.close()

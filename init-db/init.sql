@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_aluno (
     email VARCHAR(255) UNIQUE NOT NULL,
     cpf VARCHAR(14) UNIQUE,
     id_curso INT NOT NULL,
+    possui_trabalho_remunerado BOOL NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
     senha_hash VARCHAR(255) NOT NULL,
     pdf_file LONGBLOB NOT NULL,
@@ -105,6 +106,17 @@ CREATE TABLE IF NOT EXISTS tb_password_reset_token (
   INDEX idx_user_type_id (user_type, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS tb_bolsa_aluno (
+  id_bolsa     INT AUTO_INCREMENT PRIMARY KEY,
+  id_aluno     INT NOT NULL,
+  possui_bolsa TINYINT(1) NOT NULL DEFAULT 0,
+
+  CONSTRAINT uq_bolsa_aluno UNIQUE (id_aluno),
+  CONSTRAINT fk_bolsa_aluno
+    FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);
 
 
 

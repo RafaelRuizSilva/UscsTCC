@@ -20,3 +20,19 @@ class RelatorioMensalOut(BaseModel):
 class PendenciaOut(BaseModel):
     id_projeto: int
     titulo_projeto: str
+
+class RelatorioMensalSecretariaOut(BaseModel):
+    id_relatorio: int
+    id_projeto: int
+    titulo_projeto: str
+    orientador_nome: Optional[str] = None
+    mes: str                 # "YYYY-MM"
+    ok: bool
+    observacao: Optional[str] = None
+    confirmado_em: datetime
+
+class PendenciaSecretariaOut(BaseModel):
+    id_projeto: int
+    titulo_projeto: str
+    orientador_nome: Optional[str] = None
+    mes: str                 # "YYYY-MM"

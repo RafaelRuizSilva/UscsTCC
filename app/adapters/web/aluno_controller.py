@@ -39,6 +39,7 @@ def cadastrar_aluno(
     email: str = Form(...),
     cpf: str = Form(...),
     id_curso: int = Form(...),
+    possui_trabalho_remunerado: bool = Form(...),
     senha: str = Form(..., min_length=6),
     pdf: UploadFile = File(...),  # 👈 OBRIGATÓRIO
     repo: Annotated[IAlunoRepository, Depends(get_repo)] = None,
@@ -60,6 +61,7 @@ def cadastrar_aluno(
         email=email,
         cpf=cpf,
         id_curso=id_curso,
+        possui_trabalho_remunerado=possui_trabalho_remunerado,
         senha=senha,
     )
 

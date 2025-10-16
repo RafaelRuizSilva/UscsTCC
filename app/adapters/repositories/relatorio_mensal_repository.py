@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import date
-from app.core.models.relatorio_mensal import RelatorioMensalOut, PendenciaOut
+from app.core.models.relatorio_mensal import RelatorioMensalOut, PendenciaOut, RelatorioMensalSecretariaOut, PendenciaSecretariaOut
 from app.core.ports.output.porta_relatorio_mensal_repository import IRelatorioMensalRepository
 
 class RelatorioMensalRepository(IRelatorioMensalRepository):
@@ -98,3 +98,65 @@ class RelatorioMensalRepository(IRelatorioMensalRepository):
             return bool(cursor.fetchone())
         finally:
             cursor.close()
+
+    def listar_todos_por_mes(self, mes_ref: date) -> list[RelatorioMensalSecretariaOut]:
+        c = self.db_conn.cursor()
+        try:
+            c.execute("""
+                SELECT rm.id_relatorio,
+                       p.id_projeto,
+                       p.titulo_projeto,
+                       o.nome_completo AS orientador_nome,
+                       rm.mes_referencia,
+                       rm.ok,
+                       rm.observacao,
+                       rm.confirmado_em
+                  FROM tb_relatorio_mensal rm
+                  JOIN tb_novo_projeto p ON p.id_projeto = rm.id_projeto
+                  LEFT JOIN tb_cadastro_orientador o ON o.id_orientador = p.id_orientador
+                 WHERE rm.mes_referencia = %s
+              ORDER BY rm.confirmado_em DESC
+            """, (mes_ref,))
+            rows = c.fetchall()
+            out = []
+            for r in rows:
+                out.append(RelatorioMensalSecretariaOut(
+                    id_relatorio=r[0],
+                    id_projeto=r[1],
+                    titulo_projeto=r[2],
+                    orientador_nome=r[3],
+                    mes=r[4].strftime("%Y-%m"),
+                    ok=bool(r[5]),
+                    observacao=r[6],
+                    confirmado_em=r[7]
+                ))
+            return out
+        finally:
+            c.close()
+
+    def listar_pendentes_por_mes(self, mes_ref: date) -> list[PendenciaSecretariaOut]:
+        c = self.db_conn.cursor()
+        try:
+            c.execute("""
+                SELECT p.id_projeto,
+                       p.titulo_projeto,
+                       o.nome_completo AS orientador_nome
+                  FROM tb_novo_projeto p
+             LEFT JOIN tb_cadastro_orientador o ON o.id_orientador = p.id_orientador
+             LEFT JOIN tb_relatorio_mensal rm
+                       ON rm.id_projeto = p.id_projeto
+                      AND rm.mes_referencia = %s
+                 WHERE rm.id_relatorio IS NULL
+              ORDER BY p.id_projeto DESC
+            """, (mes_ref,))
+            rows = c.fetchall()
+            return [
+                PendenciaSecretariaOut(
+                    id_projeto=r[0],
+                    titulo_projeto=r[1],
+                    orientador_nome=r[2],
+                    mes=mes_ref.strftime("%Y-%m")
+                ) for r in rows
+            ]
+        finally:
+            c.close()

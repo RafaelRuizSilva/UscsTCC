@@ -10,14 +10,15 @@ class AlunoRepository:
         try:
             query = """
                 INSERT INTO tb_cadastro_aluno
-                    (nome_completo, email, cpf, id_curso, senha_hash, status, pdf_file)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (nome_completo, email, cpf, id_curso, possui_trabalho_remunerado, senha_hash, status, pdf_file)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
             cursor.execute(
                 query,
                 (
                     aluno.nome_completo.lower(), aluno.email, aluno.cpf,
-                    aluno.id_curso, aluno.senha_hash, "PENDENTE", pdf_bytes
+                    aluno.id_curso, aluno.possui_trabalho_remunerado,
+                    aluno.senha_hash, "PENDENTE", pdf_bytes
                 )
             )
             self.db_conn.commit()
@@ -39,7 +40,7 @@ class AlunoRepository:
         cursor = self.db_conn.cursor()
         try:
             query = """
-                SELECT id_aluno, nome_completo, email, cpf, id_curso, status,
+                SELECT id_aluno, nome_completo, email, cpf, id_curso, possui_trabalho_remunerado, status,
                        IF(pdf_file IS NULL, 0, 1) AS has_pdf
                   FROM tb_cadastro_aluno
               ORDER BY nome_completo ASC
@@ -53,8 +54,9 @@ class AlunoRepository:
                     "email": r[2],
                     "cpf": r[3],
                     "id_curso": r[4],
-                    "status": r[5],
-                    "has_pdf": bool(r[6]),
+                    "possui_trabalho_remunerado": r[5],
+                    "status": r[6],
+                    "has_pdf": bool(r[7]),
                 }
                 for r in rows
             ]
@@ -65,7 +67,7 @@ class AlunoRepository:
         cursor = self.db_conn.cursor()
         try:
             query = """
-                SELECT id_aluno, nome_completo, email, cpf, id_curso, status,
+                SELECT id_aluno, nome_completo, email, cpf, id_curso, possui_trabalho_remunerado, status,
                        IF(pdf_file IS NULL, 0, 1) AS has_pdf
                   FROM tb_cadastro_aluno
                  WHERE id_aluno = %s
@@ -80,8 +82,9 @@ class AlunoRepository:
                 "email": row[2],
                 "cpf": row[3],
                 "id_curso": row[4],
-                "status": row[5],
-                "has_pdf": bool(row[6]),
+                "possui_trabalho_remunerado": row[5],
+                "status": row[6],
+                "has_pdf": bool(row[7]),
             }
         finally:
             cursor.close()
