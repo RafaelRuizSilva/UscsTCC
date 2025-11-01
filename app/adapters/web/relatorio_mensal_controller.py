@@ -8,7 +8,7 @@ from app.core.use_cases.listar_relatorios_do_orientador_por_mes_usecase import L
 from app.core.use_cases.listar_pendencias_do_orientador_no_mes_usecase import ListarPendenciasDoOrientadorNoMesUseCase
 from app.core.models.relatorio_mensal import (ConfirmarRelatorioMensalDTO, RelatorioMensalOut, PendenciaOut,
                                               RelatorioMensalSecretariaOut, PendenciaSecretariaOut)
-from app.dependencies import get_db_conn
+from app.dependencies.db import get_db_conn
 from app.core.security import get_current_user
 from app.adapters.message.rabbit_publisher import RabbitPublisher
 
@@ -70,7 +70,7 @@ def confirmar_relatorio_mensal(
         try:
             publisher = RabbitPublisher()
             publisher.publish({
-                "tipo": "Confirmacaoo - relatorio mensal",
+                "tipo": "Confirmacao - relatorio mensal",
                 "mensagem": f"O orientador {orientador_id} enviou o relatorio mensal do projeto {id_projeto} (mês {mes_ref.strftime('%Y-%m')})",
                 "destinatario": "secretaria"
             })

@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class Notificacao(BaseModel):
     id: int | None = None
@@ -7,7 +7,7 @@ class Notificacao(BaseModel):
     mensagem: str
     destinatario: str  # Ex: "secretaria", "aluno", etc.
     lida: bool = False
-    data_criacao: datetime = datetime.now()
+    data_criacao: datetime = Field(default_factory=datetime.utcnow)
 
 class NotificacaoCreate(BaseModel):
     tipo: str

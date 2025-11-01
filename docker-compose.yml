@@ -1,12 +1,10 @@
-version: '3.9'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"     # Porta AMQP (comunicação entre serviços)
-      - "15672:15672"   # Porta do painel web
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -27,12 +25,18 @@ services:
   api:
     build: .
     container_name: fastapi_app
-    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
     volumes:
       - .:/app
-    working_dir: /app  # importante para executar no contexto correto
+    working_dir: /app
     ports:
       - "8001:8001"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: 1404
+      DB_NAME: db_uscs_ic
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - db
       - rabbitmq
@@ -40,10 +44,16 @@ services:
   worker_notificacao:
     build: .
     container_name: notificacao_worker
-    command: python app/adapters/workers/notificacao_consumer.py
+    command: python -m app.adapters.workers.notificacao_consumer
     volumes:
       - .:/app
     working_dir: /app
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: 1404
+      DB_NAME: db_uscs_ic
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - rabbitmq
       - db

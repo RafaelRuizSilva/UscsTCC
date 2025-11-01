@@ -3,5 +3,5 @@ from typing import List, Tuple
 
 class IRelatorioRepository(ABC):
     @abstractmethod
-    def listar_alunos_nome_cpf(self) -> List[Tuple[str, str]]:
+    def listar_alunos_nome_cpf(self) -> List[Tuple[str, str, str, str]]:
         pass

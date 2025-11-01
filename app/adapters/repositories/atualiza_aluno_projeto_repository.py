@@ -1,27 +1,30 @@
 from typing import List
-from app.core.ports.output.porta_upd_aluno_projeto import IProjetoGateway
 from pymysql.connections import Connection
 
-class ProjetoGateway(IProjetoGateway):
+class ProjetoGateway:
     def __init__(self, db_conn: Connection):
         self.db_conn = db_conn
 
     def atualizar_alunos_projeto(self, id_projeto: int, id_alunos: List[int]):
-        cursor = self.db_conn.cursor()
+        cur = self.db_conn.cursor()
+        try:
+            # projeto existe?
+            cur.execute("SELECT 1 FROM tb_novo_projeto WHERE id_projeto=%s", (id_projeto,))
+            if not cur.fetchone():
+                raise ValueError("Projeto não encontrado")
 
-        # Verifica se projeto existe
-        cursor.execute("SELECT 1 FROM tb_novo_projeto WHERE id_projeto = %s", (id_projeto,))
-        if not cursor.fetchone():
-            raise ValueError("Projeto não encontrado")
+            # limpa vínculos
+            cur.execute("DELETE FROM tb_projeto_aluno WHERE id_projeto=%s", (id_projeto,))
 
-        # Limpa vínculos existentes
-        cursor.execute("DELETE FROM tb_projeto_aluno WHERE id_projeto = %s", (id_projeto,))
-
-        # Insere novos vínculos
-        for id_aluno in id_alunos:
-            cursor.execute(
-                "INSERT INTO tb_projeto_aluno (id_projeto, id_aluno) VALUES (%s, %s)",
-                (id_projeto, id_aluno)
-            )
-
-        self.db_conn.commit()
+            # insere novos (se houver)
+            if id_alunos:
+                cur.executemany(
+                    "INSERT INTO tb_projeto_aluno (id_projeto, id_aluno) VALUES (%s, %s)",
+                    [(id_projeto, aid) for aid in id_alunos],
+                )
+            self.db_conn.commit()
+        except Exception:
+            self.db_conn.rollback()
+            raise
+        finally:
+            cur.close()

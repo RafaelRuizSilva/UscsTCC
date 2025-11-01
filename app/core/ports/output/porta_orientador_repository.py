@@ -26,3 +26,12 @@ class IOrientadorRepository(ABC):
         Deve usar ILIKE ou equivalente (ex.: LOWER(col) LIKE LOWER(%...%)).
         """
         pass
+
+    @abstractmethod
+    def update_status(self, orientador_id: int, novo_status: str) -> None: ...
+
+    @abstractmethod
+    def list_inadimplentes(self) -> list[dict]: ...
+
+    @abstractmethod
+    def get_status_flags(self, orientador_id: int) -> dict | None: ...

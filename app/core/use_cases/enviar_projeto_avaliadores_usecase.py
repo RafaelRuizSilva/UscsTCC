@@ -75,3 +75,6 @@ class EnviarProjetoAvaliadoresUseCase:
             html=html,
             attachments=[(f"{titulo}.pdf", pdf_bytes, "application/pdf")],
         )
+
+        # Armazenar envio no banco de dados
+        self.projeto_repo.salvar_envio_avaliadores(id_projeto, destinatarios)

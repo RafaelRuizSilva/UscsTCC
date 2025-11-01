@@ -8,7 +8,7 @@ class GerarRelatorioAlunosUseCase:
 
     def execute(self) -> str:
         alunos = self.repo.listar_alunos_nome_cpf()
-        df = pd.DataFrame(alunos, columns=["nome_completo", "cpf"])
+        df = pd.DataFrame(alunos, columns=['orientador', 'aluno', 'titulo_projeto', 'cod_projeto'])
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as f:
             df.to_excel(f.name, index=False)

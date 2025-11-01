@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+
+# Routers
 from app.adapters.web.email_controller import router as email_router
 from app.adapters.web.curso_controller import router as curso_controller
 from app.adapters.web.aluno_controller import router as aluno_controller
@@ -14,46 +17,56 @@ from app.adapters.web.relatorio_mensal_controller import router as rel_mensal
 from app.adapters.web.secretaria_controller import router as secretaria_controller
 from app.adapters.web.bolsa_controller import router as bolsa_controller
 from app.adapters.web.projeto_envio_controller import router as projeto_envio_controller
+from app.adapters.web.envio_avaliadores import router as envio_avaliadores
 
-
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-
-__author__ = 'Rafael Ruiz da Silva 22/05/2025'
-
-app = FastAPI()
-
-app.include_router(email_router)
-app.include_router(curso_controller)
-app.include_router(aluno_controller)
-app.include_router(auth_controller)
-app.include_router(orientador_controller)
-app.include_router(projeto_controller)
-app.include_router(inscricao_controller)
-app.include_router(relatorio_controller)
-app.include_router(avaliador_externo_controller)
-app.include_router(notificacao_controller)
-app.include_router(campus_controller)
-app.include_router(rel_mensal)
-app.include_router(secretaria_controller)
-app.include_router(bolsa_controller)
-app.include_router(projeto_envio_controller)
-
-# Defina a lista de origens permitidas
-origins = [
-    "http://localhost:3000",   # se o front estiver em React local
-    "http://127.0.0.1:3000",
-    "http://localhost:4200",   # se Angular
-    "https://meu-frontend.com", # produção
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,          # pode ser ["*"] para liberar geral
-    allow_credentials=True,
-    allow_methods=["*"],            # ou ["GET", "POST", "DELETE", "PUT"]
-    allow_headers=["*"],
+app = FastAPI(
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
 )
 
-#uvicorn.run(app, host='localhost', port=8001)
-#uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+# Ping (raiz) – opcional
+@app.get("/__ping")
+def __ping_root():
+    return {"ok": True}
+
+# Ping com /api
+@app.get("/api/__ping")
+def __ping_api():
+    return {"ok": True}
+
+# ====== Todas as rotas sob /api ======
+api = APIRouter(prefix="/api")
+
+api.include_router(email_router)
+api.include_router(curso_controller)
+api.include_router(aluno_controller)
+api.include_router(auth_controller)
+api.include_router(orientador_controller)
+api.include_router(projeto_controller)
+api.include_router(inscricao_controller)
+api.include_router(relatorio_controller)
+api.include_router(avaliador_externo_controller)
+api.include_router(notificacao_controller)   # agora também em /api
+api.include_router(campus_controller)
+api.include_router(rel_mensal)
+api.include_router(secretaria_controller)
+api.include_router(bolsa_controller)
+api.include_router(projeto_envio_controller)
+api.include_router(envio_avaliadores)
+
+app.include_router(api)
+
+# ====== CORS ======
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:4200",
+    "https://meu-frontend.com",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

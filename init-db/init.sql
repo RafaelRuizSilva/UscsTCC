@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_aluno (
     id_curso INT NOT NULL,
     possui_trabalho_remunerado BOOL NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
+    inadimplente_ate DATE,
     senha_hash VARCHAR(255) NOT NULL,
     pdf_file LONGBLOB NOT NULL,
     FOREIGN KEY (id_curso)
@@ -27,7 +28,9 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_orientador (
     nome_completo VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     cpf VARCHAR(14) UNIQUE,
-    senha_hash VARCHAR(255) NOT NULL
+    senha_hash VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
+    inadimplente_ate DATE
 );
 
 CREATE TABLE IF NOT EXISTS tb_campus (
@@ -37,10 +40,12 @@ CREATE TABLE IF NOT EXISTS tb_campus (
 
 CREATE TABLE IF NOT EXISTS tb_novo_projeto (
     id_projeto INT AUTO_INCREMENT PRIMARY KEY,
+    cod_projeto VARCHAR(100) NOT NULL,
     titulo_projeto VARCHAR(255) NOT NULL,
     resumo VARCHAR(1000) NOT NULL,
     id_orientador int,
     id_campus int,
+    ideia_inicial LONGBLOB NOT NULL,
     docx_file LONGBLOB default NULL,
     pdf_file  LONGBLOB default NULL,
 	FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador) ON DELETE SET NULL,
@@ -50,7 +55,8 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
 CREATE TABLE IF NOT EXISTS tb_projeto_aluno (
     id_inscricao INT AUTO_INCREMENT PRIMARY KEY,
     id_aluno INT NOT NULL,                         
-    id_projeto INT NOT NULL,                       
+    id_projeto INT NOT NULL,  
+    status_aluno BOOLEAN DEFAULT FALSE,                     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY tb_projeto_aluno(id_projeto) REFERENCES tb_novo_projeto(id_projeto) ON DELETE CASCADE,
     FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno) ON DELETE CASCADE
@@ -118,5 +124,34 @@ CREATE TABLE IF NOT EXISTS tb_bolsa_aluno (
     ON UPDATE CASCADE
 );
 
+CREATE TABLE tb_envio_avaliadores (
+    id_envio INT AUTO_INCREMENT PRIMARY KEY,
+    id_projeto INT NOT NULL,
+    id_avaliador INT NOT NULL,
+    data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_projeto) REFERENCES tb_novo_projeto(id_projeto),
+    FOREIGN KEY (id_avaliador) REFERENCES TB_AVALIADOR_EXTERNO(id_avaliador)
+);
 
+CREATE TABLE IF NOT EXISTS tb_inscricao_projeto (
+  id_inscricao INT AUTO_INCREMENT PRIMARY KEY,
+  id_aluno     INT NOT NULL,
+  id_projeto   INT NOT NULL,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  -- um aluno pode se inscrever uma única vez em cada projeto
+  CONSTRAINT uq_insc_aluno_projeto UNIQUE (id_aluno, id_projeto),
+
+  CONSTRAINT fk_insc_aluno
+    FOREIGN KEY (id_aluno)   REFERENCES tb_cadastro_aluno(id_aluno)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+  CONSTRAINT fk_insc_projeto
+    FOREIGN KEY (id_projeto) REFERENCES tb_novo_projeto(id_projeto)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+ENGINE=InnoDB;
+CREATE INDEX IF NOT EXISTS idx_notif_dest_lida_data
+  ON tb_notificacao (destinatario, lida, data_criacao);
 

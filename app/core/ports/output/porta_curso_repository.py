@@ -9,3 +9,15 @@ class ICursoRepository(ABC):
     @abstractmethod
     def get_all(self) -> list[dict]:
         pass
+
+    @abstractmethod
+    def get_by_id(self, curso_id: int) -> dict:
+        pass
+
+    @abstractmethod
+    def update(self, curso_id: int, curso: Curso) -> None:
+        pass
+
+    @abstractmethod
+    def delete(self, curso_id: int) -> None:
+        pass

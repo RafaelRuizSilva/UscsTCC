@@ -36,5 +36,5 @@ def enviar_projeto_para_avaliadores(
         return {"mensagem": "Projeto enviado aos avaliadores."}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Erro ao enviar e-mail aos avaliadores")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar e-mail aos avaliadores {e}")
