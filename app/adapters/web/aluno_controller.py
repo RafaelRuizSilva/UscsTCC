@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File, Form, Path
 
 from app.dependencies.db import get_db_conn
 from app.adapters.repositories.aluno_repository import AlunoRepository
@@ -12,11 +12,33 @@ from app.core.use_cases.delete_alunos_usecase import DeleteAlunoUseCase
 from app.core.use_cases.get_aluno_usecase import GetAlunoByIdUseCase
 from app.core.use_cases.aprovar_aluno_usecase import AprovarAlunoUseCase
 from app.core.use_cases.reprovar_aluno_usecase import ReprovarAlunoUseCase
+from app.core.ports.output.porta_projeto_repository import IProjetoRepository
+from app.core.use_cases.inadimplentar_todos_alunos_do_projeto_usecase import InadimplentarTodosAlunosDoProjetoUseCase
+from app.adapters.repositories.projeto_repository import ProjetoRepository
 
 router = APIRouter(prefix="/alunos", tags=["Alunos"])
 
-def get_repo(db=Depends(get_db_conn)) -> IAlunoRepository:
+def get_aluno_repo(db=Depends(get_db_conn)) -> IAlunoRepository:
     return AlunoRepository(db)
+def get_projeto_repo(db=Depends(get_db_conn)) -> IProjetoRepository:
+    return ProjetoRepository(db)
+
+@router.post("/{id_projeto}/inadimplentar-alunos", status_code=status.HTTP_200_OK)
+def inadimplentar_todos_alunos_do_projeto(
+    id_projeto: int = Path(..., ge=1),
+    projeto_repo: Annotated[IProjetoRepository, Depends(get_projeto_repo)] = None,
+    aluno_repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)] = None,
+):
+    try:
+        total = InadimplentarTodosAlunosDoProjetoUseCase(projeto_repo, aluno_repo).execute(id_projeto)
+        return {
+            "mensagem": "Alunos reprovados e marcados como inadimplentes por 2 anos.",
+            "total_inadimplentados": total
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao inadimplentar alunos do projeto: {e}")
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def cadastrar_aluno(
@@ -27,7 +49,7 @@ def cadastrar_aluno(
     possui_trabalho_remunerado: bool = Form(...),
     senha: str = Form(..., min_length=6),
     pdf: UploadFile = File(...),
-    repo: Annotated[IAlunoRepository, Depends(get_repo)] = None,
+    repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)] = None,
 ):
     fn = (pdf.filename or "").lower()
     if not fn.endswith(".pdf"):
@@ -57,14 +79,14 @@ def cadastrar_aluno(
         raise HTTPException(status_code=500, detail=f"Erro inesperado no cadastro: {e}")
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def listar_alunos(repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def listar_alunos(repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     try:
         return ListAlunosUseCase(repo).execute()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno ao listar alunos: {e}")
 
 @router.get("/inadimplentes", status_code=status.HTTP_200_OK)
-def listar_inadimplentes(repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def listar_inadimplentes(repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     try:
         return {"alunos": repo.list_inadimplentes()}
     except Exception as e:
@@ -75,7 +97,7 @@ def me(user_id: int = Depends(get_current_user("aluno"))):
     return {"msg": f"Aluno autenticado: ID {user_id}"}
 
 @router.get("/{aluno_id}", status_code=status.HTTP_200_OK)
-def obter_aluno_por_id(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def obter_aluno_por_id(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     try:
         data = GetAlunoByIdUseCase(repo).execute(aluno_id)
         if not data:
@@ -87,7 +109,7 @@ def obter_aluno_por_id(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(
         raise HTTPException(status_code=500, detail=f"Erro interno ao buscar aluno: {e}")
 
 @router.put("/{aluno_id}/aprovar", status_code=status.HTTP_200_OK)
-def aprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def aprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     try:
         AprovarAlunoUseCase(repo).execute(aluno_id)
         return {"mensagem": "Aluno aprovado com sucesso"}
@@ -97,7 +119,7 @@ def aprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_r
         raise HTTPException(status_code=500, detail=f"Erro ao aprovar aluno: {e}")
 
 @router.put("/{aluno_id}/reprovar", status_code=status.HTTP_200_OK)
-def reprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def reprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     try:
         ReprovarAlunoUseCase(repo).execute(aluno_id)
         return {"mensagem": "Aluno reprovado e marcado como inadimplente por 2 anos"}
@@ -107,7 +129,7 @@ def reprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_
         raise HTTPException(status_code=500, detail=f"Erro ao reprovar aluno: {e}")
 
 @router.get("/{aluno_id}/pdf", status_code=status.HTTP_200_OK)
-def baixar_pdf_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def baixar_pdf_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     data = repo.get_pdf_by_id(aluno_id)
     if not data:
         raise HTTPException(status_code=404, detail="PDF não encontrado para este aluno.")
@@ -121,7 +143,7 @@ def baixar_pdf_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(ge
 def atualizar_status(
     aluno_id: int,
     novo_status: str,
-    repo: Annotated[IAlunoRepository, Depends(get_repo)],
+    repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)],
 ):
     try:
         # Chama o métod update_status do repositório para atualizar o status do aluno
@@ -134,7 +156,7 @@ def atualizar_status(
 
 
 @router.delete("/{aluno_id}", status_code=status.HTTP_204_NO_CONTENT)
-def excluir_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_repo)]):
+def excluir_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
     try:
         DeleteAlunoUseCase(repo).execute(aluno_id)
     except ValueError as e:

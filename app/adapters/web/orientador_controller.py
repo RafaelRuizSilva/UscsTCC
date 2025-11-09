@@ -11,8 +11,36 @@ from app.dependencies.db import get_db_conn
 from app.core.security import get_current_user
 from app.core.use_cases.aprovar_orientador_usecase import AprovarOrientadorUseCase
 from app.core.use_cases.reprovar_orientador_usecase import ReprovarOrientadorUseCase
+from typing import Annotated
+from app.core.ports.output.porta_projeto_repository import IProjetoRepository
+from app.adapters.repositories.projeto_repository import ProjetoRepository
+from app.core.ports.output.porta_orientador_repository import IOrientadorRepository
+from app.core.use_cases.inadimplentar_orientador_projeto_usecase import InadimplentarOrientadorDoProjetoUseCase
 
 router = APIRouter(prefix="/orientadores", tags=["Orientadores"])
+
+def get_projeto_repo(db=Depends(get_db_conn)) -> IProjetoRepository:
+    return ProjetoRepository(db)
+
+def get_orientador_repo(db=Depends(get_db_conn)) -> IOrientadorRepository:
+    return OrientadorRepository(db)
+
+@router.post("/{id_projeto}/inadimplentar-orientador", status_code=status.HTTP_200_OK)
+def inadimplentar_orientador_do_projeto(
+    id_projeto: int = Path(..., ge=1),
+    projeto_repo: Annotated[IProjetoRepository, Depends(get_projeto_repo)] = None,
+    orientador_repo: Annotated[IOrientadorRepository, Depends(get_orientador_repo)] = None,
+):
+    try:
+        id_orientador = InadimplentarOrientadorDoProjetoUseCase(projeto_repo, orientador_repo).execute(id_projeto)
+        return {
+            "mensagem": "Orientador reprovado e marcado como inadimplente por 2 anos.",
+            "id_orientador": id_orientador
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao inadimplentar orientador do projeto: {e}")
 
 @router.post("/")
 def cadastrar_orientador(orientador: Orientador, db=Depends(get_db_conn)):
