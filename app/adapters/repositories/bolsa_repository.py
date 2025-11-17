@@ -1,79 +1,155 @@
-from typing import List, Dict
+# app/adapters/repositories/bolsa_repository.py
+from typing import List, Dict, Optional
 from app.core.ports.output.porta_bolsa_repository import IBolsaRepository
+from app.core.models.bolsa import BolsaCreate
 from pymysql.err import IntegrityError
 
 class BolsaRepository(IBolsaRepository):
     def __init__(self, db_conn):
-        self.db_conn = db_conn
+        self.db = db_conn
 
-    def list_all(self) -> List[Dict]:
-        """
-        Lista todas as bolsas com dados básicos do aluno.
-        """
-        cur = self.db_conn.cursor()
+    def create(self, data: BolsaCreate) -> int:
+        cur = self.db.cursor()
         try:
-            query = """
-                SELECT a.id_aluno,
+            # garante que tipo existe
+            cur.execute("SELECT 1 FROM tb_tipo_bolsa WHERE id_tipo_bolsa=%s", (data.id_tipo_bolsa,))
+            if not cur.fetchone():
+                raise ValueError("Tipo de bolsa inexistente.")
+
+            # garante que aluno existe
+            cur.execute("SELECT 1 FROM tb_cadastro_aluno WHERE id_aluno=%s", (data.id_aluno,))
+            if not cur.fetchone():
+                raise ValueError("Aluno inexistente.")
+
+            cur.execute(
+                """
+                INSERT INTO tb_bolsa (id_aluno, id_tipo_bolsa)
+                VALUES (%s, %s)
+                """,
+                (data.id_aluno, data.id_tipo_bolsa)
+            )
+            self.db.commit()
+            new_id = cur.lastrowid
+
+            # seta flag do aluno
+            self.set_aluno_possui_bolsa(data.id_aluno, True)
+            return new_id
+        except IntegrityError as e:
+            # pode ser UNIQUE uq_aluno_tipo
+            raise ValueError("Este aluno já possui essa bolsa.") from e
+        finally:
+            cur.close()
+
+    def delete_by_id(self, id_bolsa: int) -> int:
+        cur = self.db.cursor()
+        try:
+            # pega dono
+            cur.execute("SELECT id_aluno FROM tb_bolsa WHERE id_bolsa=%s", (id_bolsa,))
+            row = cur.fetchone()
+            if not row:
+                return 0
+            id_aluno = row[0]
+
+            cur.execute("DELETE FROM tb_bolsa WHERE id_bolsa=%s", (id_bolsa,))
+            self.db.commit()
+            affected = cur.rowcount
+
+            # se não sobrou nenhuma bolsa, limpa a flag
+            if affected and not self.exists_any_for_aluno(id_aluno):
+                self.set_aluno_possui_bolsa(id_aluno, False)
+
+            return affected
+        finally:
+            cur.close()
+
+    def list_all(self, limit: int, offset: int) -> List[Dict]:
+        cur = self.db.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT b.id_bolsa,
+                       b.id_aluno,
                        a.nome_completo,
                        a.email,
-                       IFNULL(b.possui_bolsa, 0) AS possui_bolsa
-                  FROM tb_cadastro_aluno a
-             LEFT JOIN tb_bolsa_aluno   b ON b.id_aluno = a.id_aluno
-              ORDER BY a.nome_completo ASC
-            """
-            cur.execute(query)
+                       b.id_tipo_bolsa,
+                       t.tipo_bolsa,
+                       b.created_at
+                  FROM tb_bolsa b
+                  JOIN tb_cadastro_aluno a ON a.id_aluno = b.id_aluno
+                  JOIN tb_tipo_bolsa t     ON t.id_tipo_bolsa = b.id_tipo_bolsa
+              ORDER BY b.created_at DESC
+                 LIMIT %s OFFSET %s
+                """,
+                (limit, offset)
+            )
             rows = cur.fetchall()
             return [
                 {
-                    "id_aluno": r[0],
-                    "nome_completo": r[1],
-                    "email": r[2],
-                    "possui_bolsa": bool(r[3]),
+                    "id_bolsa": r[0],
+                    "id_aluno": r[1],
+                    "aluno_nome": r[2],
+                    "aluno_email": r[3],
+                    "id_tipo_bolsa": r[4],
+                    "tipo_bolsa": r[5],
+                    "created_at": r[6],
                 }
                 for r in rows
             ]
         finally:
             cur.close()
 
-    def set_possui_bolsa(self, id_aluno: int, possui_bolsa: bool) -> None:
-        """
-        Upsert: cria o registro se não existir, atualiza se já existir.
-        Requer UNIQUE (id_aluno) em tb_bolsa_aluno.
-        """
-        cur = self.db_conn.cursor()
+    def get_by_id(self, id_bolsa: int) -> Optional[Dict]:
+        cur = self.db.cursor()
         try:
-            sql = """
-                INSERT INTO tb_bolsa_aluno (id_aluno, possui_bolsa)
-                VALUES (%s, %s)
-                ON DUPLICATE KEY UPDATE possui_bolsa = VALUES(possui_bolsa)
-            """
-            cur.execute(sql, (id_aluno, 1 if possui_bolsa else 0))
-            self.db_conn.commit()
-        except IntegrityError as e:
-            # se o aluno não existir (FK), cai aqui
-            msg = str(e).lower()
-            if "foreign key constraint fails" in msg:
-                raise ValueError("Aluno inválido (id_aluno não existe).")
-            else:
-                raise
+            cur.execute(
+                """
+                SELECT b.id_bolsa,
+                       b.id_aluno,
+                       a.nome_completo,
+                       a.email,
+                       b.id_tipo_bolsa,
+                       t.tipo_bolsa,
+                       b.created_at
+                  FROM tb_bolsa b
+                  JOIN tb_cadastro_aluno a ON a.id_aluno = b.id_aluno
+                  JOIN tb_tipo_bolsa t     ON t.id_tipo_bolsa = b.id_tipo_bolsa
+                 WHERE b.id_bolsa = %s
+                 LIMIT 1
+                """,
+                (id_bolsa,)
+            )
+            r = cur.fetchone()
+            if not r:
+                return None
+            return {
+                "id_bolsa": r[0],
+                "id_aluno": r[1],
+                "aluno_nome": r[2],
+                "aluno_email": r[3],
+                "id_tipo_bolsa": r[4],
+                "tipo_bolsa": r[5],
+                "created_at": r[6],
+            }
         finally:
             cur.close()
 
-    def create(self, id_aluno: int, possui_bolsa: bool) -> int:
-        cur = self.db_conn.cursor()
+    def exists_any_for_aluno(self, id_aluno: int) -> bool:
+        cur = self.db.cursor()
+        try:
+            cur.execute("SELECT 1 FROM tb_bolsa WHERE id_aluno=%s LIMIT 1", (id_aluno,))
+            return cur.fetchone() is not None
+        finally:
+            cur.close()
+
+    def set_aluno_possui_bolsa(self, id_aluno: int, possui: bool) -> None:
+        cur = self.db.cursor()
         try:
             cur.execute(
-                "INSERT INTO tb_bolsa_aluno (id_aluno, possui_bolsa) VALUES (%s, %s)",
-                (id_aluno, 1 if possui_bolsa else 0),
+                "UPDATE tb_cadastro_aluno SET possui_bolsa=%s WHERE id_aluno=%s",
+                (1 if possui else 0, id_aluno)
             )
-            self.db_conn.commit()
-            return cur.lastrowid
-        except IntegrityError as e:
-            msg = str(e).lower()
-            if "duplicate entry" in msg:
-                raise ValueError("Este aluno já possui registro de bolsa.")
-            if "foreign key constraint fails" in msg:
-                raise ValueError("Aluno inválido (id_aluno não existe).")
-            raise
+            self.db.commit()
+            if cur.rowcount == 0:
+                raise ValueError("Aluno não encontrado.")
         finally:
             cur.close()

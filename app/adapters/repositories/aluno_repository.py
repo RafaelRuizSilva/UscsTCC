@@ -1,7 +1,6 @@
 from app.core.models.aluno import Aluno
 from pymysql.err import IntegrityError
 from datetime import date, timedelta
-from typing import Sequence
 
 class AlunoRepository:
     def __init__(self, db_conn):
@@ -175,25 +174,5 @@ class AlunoRepository:
             if not r:
                 return None
             return {"status": r[0], "inadimplente_ate": r[1]}
-        finally:
-            cur.close()
-
-    def update_status_many_reprovado(self, aluno_ids: Sequence[int]) -> int:
-        if not aluno_ids:
-            return 0
-        cur = self.db_conn.cursor()
-        try:
-            inad_until = date.today() + timedelta(days=365 * 2)
-            placeholders = ",".join(["%s"] * len(aluno_ids))
-            # status = 'REPROVADO' e seta inadimplente_ate para todos os IDs
-            sql = f"""
-                UPDATE tb_cadastro_aluno
-                   SET status=%s, inadimplente_ate=%s
-                 WHERE id_aluno IN ({placeholders})
-            """
-            params = ["INADIMPLENTE", inad_until, *aluno_ids]
-            cur.execute(sql, params)
-            self.db_conn.commit()
-            return cur.rowcount or 0
         finally:
             cur.close()
