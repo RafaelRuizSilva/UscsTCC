@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS tb_cadastro_aluno (
     inadimplente_ate DATE,
     senha_hash VARCHAR(255) NOT NULL,
     pdf_file LONGBLOB NOT NULL,
+    possui_bolsa TINYINT(1) NOT NULL DEFAULT 0,
     FOREIGN KEY (id_curso)
         REFERENCES tb_curso(id_curso)
         ON DELETE CASCADE
+
 );
 
 CREATE TABLE IF NOT EXISTS tb_cadastro_orientador (
@@ -46,11 +48,8 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
     id_orientador int,
     id_campus int,
     ideia_inicial LONGBLOB NOT NULL,
-    ideia_inicial_pdf LONGBLOB NOT NULL,
-    mon_parcial_docx_file LONGBLOB default NULL,
-    mon_parcial_pdf_file LONGBLOB default NULL,
-    mon_final_docx_file LONGBLOB default NULL,
-    mon_final_pdf_file LONGBLOB default NULL,
+    docx_file LONGBLOB default NULL,
+    pdf_file  LONGBLOB default NULL,
 	FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador) ON DELETE SET NULL,
 	FOREIGN KEY (id_campus) REFERENCES tb_campus(id_campus) ON DELETE SET NULL
 );
@@ -115,17 +114,6 @@ CREATE TABLE IF NOT EXISTS tb_password_reset_token (
   INDEX idx_user_type_id (user_type, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS tb_bolsa_aluno (
-  id_bolsa     INT AUTO_INCREMENT PRIMARY KEY,
-  id_aluno     INT NOT NULL,
-  possui_bolsa TINYINT(1) NOT NULL DEFAULT 0,
-
-  CONSTRAINT uq_bolsa_aluno UNIQUE (id_aluno),
-  CONSTRAINT fk_bolsa_aluno
-    FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-);
 
 CREATE TABLE tb_envio_avaliadores (
     id_envio INT AUTO_INCREMENT PRIMARY KEY,
@@ -135,6 +123,22 @@ CREATE TABLE tb_envio_avaliadores (
     FOREIGN KEY (id_projeto) REFERENCES tb_novo_projeto(id_projeto),
     FOREIGN KEY (id_avaliador) REFERENCES TB_AVALIADOR_EXTERNO(id_avaliador)
 );
+
+CREATE TABLE IF NOT EXISTS tb_tipo_bolsa (
+    id_tipo_bolsa INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_bolsa VARCHAR(80) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS tb_bolsa (
+    id_bolsa INT AUTO_INCREMENT PRIMARY KEY,
+    id_aluno INT NOT NULL,
+    id_tipo_bolsa INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_aluno_tipo (id_aluno, id_tipo_bolsa),
+    FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno) ON DELETE CASCADE,
+    FOREIGN KEY (id_tipo_bolsa) REFERENCES tb_tipo_bolsa(id_tipo_bolsa) ON DELETE RESTRICT
+);
+
 
 CREATE TABLE IF NOT EXISTS tb_inscricao_projeto (
   id_inscricao INT AUTO_INCREMENT PRIMARY KEY,

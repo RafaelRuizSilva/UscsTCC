@@ -18,6 +18,7 @@ from app.adapters.web.secretaria_controller import router as secretaria_controll
 from app.adapters.web.bolsa_controller import router as bolsa_controller
 from app.adapters.web.projeto_envio_controller import router as projeto_envio_controller
 from app.adapters.web.envio_avaliadores import router as envio_avaliadores
+from app.adapters.web.tipos_bolsa_controller import router as tipos_bolsa_controller
 
 app = FastAPI(
     docs_url="/api/docs",
@@ -53,6 +54,7 @@ api.include_router(secretaria_controller)
 api.include_router(bolsa_controller)
 api.include_router(projeto_envio_controller)
 api.include_router(envio_avaliadores)
+api.include_router(tipos_bolsa_controller)
 
 app.include_router(api)
 
