@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from app.core.models.aluno import Aluno
+from typing import Sequence
 
 class IAlunoRepository(ABC):
     @abstractmethod
@@ -17,3 +18,8 @@ class IAlunoRepository(ABC):
     # ✅ NOVO
     @abstractmethod
     def update_status(self, aluno_id: int, novo_status: str) -> None: ...
+
+    @abstractmethod
+    def update_status_many_reprovado(self, aluno_ids: Sequence[int]) -> int:
+        """Marca vários alunos como REPROVADO (com inadimplente_ate +2 anos). Retorna total afetado."""
+        pass

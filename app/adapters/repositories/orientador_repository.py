@@ -95,7 +95,7 @@ class OrientadorRepository(IOrientadorRepository):
     def update_status(self, orientador_id: int, novo_status: str) -> None:
         cur = self.db_conn.cursor()
         try:
-            if str(novo_status).upper() == "REPROVADO":
+            if str(novo_status).upper() == "REPROVADO" or str(novo_status).upper() == "INADIMPLENTE" :
                 inad_until = date.today() + timedelta(days=365*2)  # DATE, igual ao aluno
                 cur.execute(
                     "UPDATE tb_cadastro_orientador SET status=%s, inadimplente_ate=%s WHERE id_orientador=%s",

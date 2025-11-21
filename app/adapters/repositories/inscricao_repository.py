@@ -86,6 +86,7 @@ class InscricaoRepository(IInscricaoRepository):
                        i.created_at
                   FROM tb_inscricao_projeto i
                   JOIN tb_cadastro_aluno a ON a.id_aluno = i.id_aluno
+                  INNER JOIN tb_projeto_aluno as b ON a.id_aluno = b.id_aluno
                  WHERE i.id_projeto = %s
               ORDER BY i.created_at DESC
                 """,
