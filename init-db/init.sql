@@ -48,8 +48,11 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
     id_orientador int,
     id_campus int,
     ideia_inicial LONGBLOB NOT NULL,
-    docx_file LONGBLOB default NULL,
-    pdf_file  LONGBLOB default NULL,
+    ideia_inicial_pdf LONGBLOB NOT NULL,
+    mon_parcial_docx_file LONGBLOB default NULL,
+    mon_parcial_pdf_file LONGBLOB default NULL,
+    mon_final_docx_file LONGBLOB default NULL,
+    mon_final_pdf_file LONGBLOB default NULL,
 	FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador) ON DELETE SET NULL,
 	FOREIGN KEY (id_campus) REFERENCES tb_campus(id_campus) ON DELETE SET NULL
 );
