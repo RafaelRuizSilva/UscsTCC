@@ -8,18 +8,39 @@ class InscricaoRepository(IInscricaoRepository):
     def create(self, id_aluno: int, id_projeto: int) -> int:
         cursor = self.db_conn.cursor()
         try:
+            # 1) Inserir na tabela de inscrição
             cursor.execute(
-                "INSERT INTO tb_inscricao_projeto (id_aluno, id_projeto) VALUES (%s, %s)",
+                """
+                INSERT INTO tb_inscricao_projeto (id_aluno, id_projeto)
+                VALUES (%s, %s)
+                """,
                 (id_aluno, id_projeto),
             )
+            id_inscricao = cursor.lastrowid
+
+            # 2) Inserir também na tabela de projeto_aluno
+            cursor.execute(
+                """
+                INSERT INTO tb_projeto_aluno (id_aluno, id_projeto, status_aluno)
+                VALUES (%s, %s, %s)
+                """,
+                (id_aluno, id_projeto, False),
+            )
+
+            # Commit da transação inteira
             self.db_conn.commit()
-            return cursor.lastrowid
+
+            return id_inscricao
+
         except IntegrityError as err:
             msg = str(err).lower()
+
             if "duplicate entry" in msg:
                 raise ValueError("Aluno já inscrito neste projeto.")
+
             if "foreign key constraint fails" in msg:
                 raise ValueError("ID de aluno e/ou projeto inválido(s).")
+
             raise
         finally:
             cursor.close()
