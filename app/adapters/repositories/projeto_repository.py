@@ -33,8 +33,8 @@ class ProjetoRepository:
             cursor.execute(
                 """
                 INSERT INTO tb_novo_projeto
-                    (cod_projeto, titulo_projeto, resumo, ideia_inicial, ideia_inicial_pdf, id_orientador, id_campus)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (cod_projeto, titulo_projeto, resumo, ideia_inicial, ideia_inicial_pdf, id_orientador, id_campus, concluido)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     projeto.cod_projeto,
@@ -44,6 +44,7 @@ class ProjetoRepository:
                     ideia_pdf_bytes,
                     projeto.id_orientador,
                     projeto.id_campus,
+                    False  # Por padrão, o projeto começa como não concluído
                 ),
             )
             self.db_conn.commit()
@@ -105,12 +106,13 @@ class ProjetoRepository:
                        IF(A.mon_parcial_pdf_file    IS NULL, 0, 1) AS has_mon_parcial_pdf,
                        IF(A.mon_final_docx_file     IS NULL, 0, 1) AS has_mon_final_docx,
                        IF(A.mon_final_pdf_file      IS NULL, 0, 1) AS has_mon_final_pdf,
+                       A.concluido,
                        (SELECT COUNT(*) FROM tb_projeto_aluno pa WHERE pa.id_projeto = A.id_projeto) AS total_inscritos
                   FROM tb_novo_projeto AS A
              LEFT JOIN tb_cadastro_orientador AS B ON A.id_orientador = B.id_orientador
              LEFT JOIN tb_campus               AS C ON A.id_campus     = C.id_campus
-              ORDER BY A.id_projeto DESC
-                 LIMIT %s OFFSET %s
+                  ORDER BY A.id_projeto DESC
+                     LIMIT %s OFFSET %s
                 """,
                 (limit, offset),
             )
@@ -132,7 +134,8 @@ class ProjetoRepository:
                     "has_mon_parcial_pdf": bool(r[12]),
                     "has_mon_final_docx": bool(r[13]),
                     "has_mon_final_pdf": bool(r[14]),
-                    "total_inscritos": int(r[15] or 0),
+                    "concluido": bool(r[15]),
+                    "total_inscritos": int(r[16] or 0),
                 }
                 for r in rows
             ]
@@ -508,6 +511,18 @@ class ProjetoRepository:
             return [r[0] for r in rows]
         finally:
             cur.close()
+
+    def concluir(self, id_projeto: int) -> None:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                "UPDATE tb_novo_projeto SET concluido = TRUE WHERE id_projeto = %s", (id_projeto,)
+            )
+            self.db_conn.commit()
+            if cursor.rowcount == 0:
+                raise ValueError("Projeto não encontrado ou já está concluído.")
+        finally:
+            cursor.close()
 
     def get_orientador_id_by_projeto(self, id_projeto: int) -> Optional[int]:
         cur = self.db_conn.cursor()

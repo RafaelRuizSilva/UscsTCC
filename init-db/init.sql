@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
     mon_parcial_pdf_file LONGBLOB default NULL,
     mon_final_docx_file LONGBLOB default NULL,
     mon_final_pdf_file LONGBLOB default NULL,
+    concluido BOOLEAN NOT NULL DEFAULT FALSE,
 	FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador) ON DELETE SET NULL,
 	FOREIGN KEY (id_campus) REFERENCES tb_campus(id_campus) ON DELETE SET NULL
 );

@@ -30,6 +30,8 @@ from app.core.use_cases.lista_projetos_paginados_usecase import (
     ListarProjetosPaginadoUseCase,
     ListarProjetosPorOrientadorPaginadoUseCase,
 )
+from app.core.use_cases.concluir_projeto_usecase import ConcluirProjetoUseCase
+
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
@@ -71,6 +73,30 @@ def deletar_projeto(id_projeto: int, db=Depends(get_db_conn)):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao deletar projeto")
+
+@router.put("/{id_projeto}/concluir")
+def concluir_projeto(
+    id_projeto: int = Path(..., ge=1),
+    db=Depends(get_db_conn),
+    orientador_id: int = Depends(get_current_user("secretaria")),  # ou secretaria se preferir
+):
+    repo = ProjetoRepository(db)
+    usecase = ConcluirProjetoUseCase(repo)
+
+    try:
+        usecase.execute(id_projeto)
+        return {
+            "success": True,
+            "message": f"Projeto {id_projeto} concluído com sucesso."
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao concluir o projeto: {str(e)}"
+        )
+
 
 @router.post("/update-alunos")
 def update_alunos_projeto(
@@ -327,6 +353,7 @@ def baixar_monografia_final_docx(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+
 # 6) Monografia FINAL PDF
 @router.get("/{id_projeto}/monografia-final.pdf", status_code=status.HTTP_200_OK)
 def baixar_monografia_final_pdf(
@@ -342,3 +369,5 @@ def baixar_monografia_final_pdf(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
