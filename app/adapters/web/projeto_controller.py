@@ -105,31 +105,49 @@ def update_alunos_projeto(
     orientador_id: int = Depends(get_current_user("orientador")),
 ):
     try:
+        # Recupera o repositório e o use case
         gateway = ProjetoGateway(db)
         usecase = UpdateProjetoAlunosUseCase(gateway)
+
+        # Atualiza os alunos
         usecase.execute(dto)
 
-        # 🔔 Notifica secretaria
-        publisher = None
+        # 🔔 Notifica a secretaria com o título do projeto
+        cursor = db.cursor()
         try:
-            publisher = RabbitPublisher()
-            publisher.publish({
-                "tipo": "Atualização de alunos",
-                "mensagem": f"Projeto {dto.id_projeto} atualizado pelo orientador.",
-                "destinatario": "secretaria",
-            })
-        finally:
+            cursor.execute("SELECT titulo_projeto FROM tb_novo_projeto WHERE id_projeto = %s", (dto.id_projeto,))
+            row = cursor.fetchone()
+
+            if row:
+                titulo_projeto = row[0]
+            else:
+                raise ValueError(f"Projeto com ID {dto.id_projeto} não encontrado.")
+
+            # Notifica secretaria com o título do projeto
+            publisher = None
             try:
-                if publisher:
-                    publisher.close()
-            except Exception:
-                pass
+                publisher = RabbitPublisher()
+                publisher.publish({
+                    "tipo": "Atualização de alunos",
+                    "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
+                    "destinatario": "secretaria",
+                })
+            finally:
+                try:
+                    if publisher:
+                        publisher.close()
+                except Exception:
+                    pass
+
+        finally:
+            cursor.close()
 
         return {"mensagem": "Alunos atualizados com sucesso"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
 
 @router.get("/")
 def listar_projetos(
