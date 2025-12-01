@@ -1,132 +1,189 @@
-# 📧 TccEmailApi
+# 📘 SGPIC — Sistema de Gestão de Projetos de Iniciação Científica
+*Universidade Municipal de São Caetano do Sul (USCS)*
 
-Sistema em Python para envio automatizado de e-mails personalizados a partir de uma planilha Excel.
+O **SGPIC** é um sistema desenvolvido para **organizar, gerenciar e acompanhar** todo o fluxo de Projetos de Iniciação Científica (IC) da USCS, centralizando operações como:
+- Cadastro de projetos
+- Gestão de alunos vinculados a orientadores
+- Fluxo de aprovação
+- Envio de e-mails automáticos (SMTP)
+- Persistência de dados em banco MySQL
+- Comunicação assíncrona via RabbitMQ
+- Execução totalmente conteinerizada com Docker
 
 ---
 
-## ✅ Requisitos
+## 🏗️ Arquitetura
 
-- Python **3.13.3**
-- Git (opcional)
-- Conexão com servidor SMTP (ex: Gmail)
+O projeto segue uma arquitetura limpa e organizada em camadas:
 
----
-
-## 📦 Instalação
-
-### 1. Instale o `virtualenv`
-
-Garanta que o `virtualenv` esteja instalado para o Python 3.13.3:
-
-```bash
-python3.13 -m pip install virtualenv
 ```
-
-### 2. Crie o ambiente virtual
-
-Substitua `<CAMINHO_PYTHON>` pelo caminho completo do Python 3.13.3:
-
-```bash
-virtualenv -p <CAMINHO_PYTHON> venv
-```
-
-> Exemplo:
-> `virtualenv -p /usr/bin/python3.13 venv`
-
-### 3. Ative o ambiente virtual
-
-- No **Windows**:
-  ```bash
-  .\venv\Scripts\activate
-  ```
-
-- No **Linux/Mac**:
-  ```bash
-  source venv/bin/activate
-  ```
-
-### 4. Instale as dependências
-
-```bash
-pip install -r requirements.txt
+app/
+│
+├── adapters/            # Interfaces externas e integrações
+│   ├── email/           # Envio de emails (SMTP)
+│   ├── message/         # RabbitMQ
+│   ├── repositories/    # Acesso a banco / persistência
+│   ├── web/             # Rotas da API
+│   └── configs/         # Arquivo settings.py
+│
+├── core/
+│   ├── models/          # Entidades de domínio
+│   ├── ports/           # Interfaces (contratos)
+│   └── use_cases/       # Regras de negócio
+│
+├── dependencies/        # Conexões e factories
+├── htmlcov/             # Relatórios
+├── init-db/             # Scripts de inicialização do banco
+├── templates/           # Templates HTML/Jinja
+└── venv/                # Ambiente virtual
 ```
 
 ---
 
-## 📁 Estrutura do Projeto
+## 🚀 Como Rodar o Projeto
 
+### **1. Pré‑requisitos**
+- **Docker Desktop** instalado  
+- Criar o arquivo obrigatório:
 ```
-UscsTCC/ 
-├── app/
-│   ├── adapters/
-│   │   ├── web/                    
-│   │   └── email/                 
-│   ├── configs/                     
-│   └── core/
-│       ├── models/                 
-│       ├── ports/
-│       │   ├── input/              
-│       │   └── output/             
-│       └── use_cases/             
-├── main.py
-├── tests/
+app/adapters/configs/settings.py
 ```
 
 ---
 
-## ⚙️ Configuração
-
-Antes de executar, crie um arquivo chamado `settings.py` na pasta `configs` do projeto com as configurações do servidor SMTP:
+## 📂 Estrutura obrigatória do `settings.py`
 
 ```python
 SMTP_CONFIG = {
     "host": "smtp.gmail.com",
     "port": 587,
-    "from": "seu_email@gmail.com",  # Substitua pelo seu e-mail
-    "password": "sua_chave_de_aplicativo"  # Nunca use sua senha normal
+    "from": "seu_email@gmail.com",
+    "password": "senha_de_app_google",
+    "use_tls": True
 }
-```
 
-> ⚠️ **Atenção**:
-> - Não compartilhe esse arquivo publicamente.
-> - **Não use sua senha de e-mail diretamente**.
-> - Gere uma **senha de app** no [Google App Passwords](https://support.google.com/accounts/answer/185833?hl=pt-BR) caso use Gmail com autenticação em dois fatores.
+DB_CONFIG = {
+    "host": "db",
+    "user": "root",
+    "password": "senha_mysql",
+    "database": "db_uscs_ic",
+    "port": 3306,
+}
 
----
-## 🚀 Executando o app
+SECRET_KEY = "sua_secret_key"
 
-Para executar o app, basta digitar no terminal com a venv ativada:
-```bash
-fastapi run main.py
-```
+RABBITMQ_URL = "amqp://guest:guest@rabbitmq:5672/"
 
-## ▶️ Executando os testes
+DATABASE_URL = "mysql+pymysql://root:senha@db:3306/db_uscs_ic"
 
-O projeto utiliza `pytest` para testes automatizados.
-
-### 1. Instale o pytest e plugins:
-**OBS:** (caso não tenha instalado o `requirements.txt`)
-```bash
-pip install pytest pytest-mock coverage
-```
-
-### 2. Execute os testes:
-
-```bash
-coverage run -m pytest tests
+TEMPLATE_DIRS = ["templates"]
 ```
 
 ---
 
-## 📫 Contato
+## ▶️ Como iniciar o sistema
 
-Em caso de dúvidas, sugestões ou colaborações, entre em contato por e-mail:
+Na raiz do projeto, execute:
 
-- rafael.silva49@uscsonline.com.br
-- felipe.moreira@uscsonline.com.br
+```bash
+docker compose up --build
+```
+
+O Docker irá:
+- Subir o MySQL  
+- Subir a API (FastAPI)  
+- Subir o RabbitMQ  
+- Carregar scripts de banco  
+- Disponibilizar o sistema em:
+
+```
+http://localhost:8000
+```
+
 ---
 
+## 🧱 Serviços Incluídos
 
-## 📝 Licença
+| Serviço       | Porta | Descrição |
+|--------------|-------|-----------|
+| API SGPIC    | 8000  | Backend FastAPI |
+| MySQL        | 3306  | Banco de dados |
+| RabbitMQ     | 5672  | Mensageria |
+| Rabbit Admin | 15672 | Painel de administração |
 
-Este projeto está sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+---
+
+## 📮 Envio de Emails (SMTP)
+
+O SGPIC utiliza Gmail via **Senha de App**.
+
+A senha de app deve ser configurada no `settings.py`.
+
+---
+
+## 🗃️ Banco de Dados
+
+Scripts de criação:
+
+```
+init-db/init.sql
+init-db/script_create_tables.sql
+```
+
+---
+
+## 📬 Mensageria com RabbitMQ
+
+Eventos (ex.: atualização de alunos do projeto) são enviados via RabbitMQ:
+
+```
+app/adapters/message/
+```
+
+---
+
+## 🧠 Core (Domínio)
+
+Regras de negócio:
+
+```
+app/core/use_cases/
+```
+
+Entidades:
+
+```
+app/core/models/
+```
+
+---
+
+## 🔐 Segurança
+
+- Nunca comitar credenciais  
+- `settings.py` está no .gitignore  
+- SECRET_KEY protegida  
+- SMTP com TLS  
+
+---
+
+## 📌 Checklist
+
+✔ Criou `settings.py`?  
+✔ Preencheu SMTP com senha de app?  
+✔ Configurou senha do MySQL?  
+✔ Docker Desktop está rodando?  
+
+---
+
+## 👥 Sobre o Projeto
+
+O **SGPIC** foi criado para digitalizar e otimizar a gestão de Projetos de Iniciação Científica da **USCS**, atendendo:
+- Secretaria  
+- Alunos  
+- Orientadores  
+- Coordenação  
+
+Automatizando comunicações, operações e validações essenciais.
+
+---
