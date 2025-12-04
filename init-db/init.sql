@@ -87,17 +87,32 @@ CREATE TABLE IF NOT EXISTS tb_notificacao (
 );
 
 CREATE TABLE IF NOT EXISTS tb_relatorio_mensal (
-  id_relatorio     INT AUTO_INCREMENT PRIMARY KEY,
-  id_projeto       INT NOT NULL,
-  id_orientador    INT NOT NULL,
-  mes_referencia   DATE NOT NULL,               -- sempre dia 1 do mês
-  ok               TINYINT(1) NOT NULL DEFAULT 1,
-  observacao       VARCHAR(500) NULL,
-  confirmado_em    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_relatorio_projeto_mes (id_projeto, mes_referencia),
-  CONSTRAINT fk_rm_projeto    FOREIGN KEY (id_projeto)    REFERENCES tb_novo_projeto(id_projeto),
-  CONSTRAINT fk_rm_orientador FOREIGN KEY (id_orientador) REFERENCES tb_cadastro_orientador(id_orientador)
-);
+    id_relatorio     INT AUTO_INCREMENT PRIMARY KEY,
+    id_projeto       INT NOT NULL,
+    id_orientador    INT NOT NULL,
+    mes_referencia   DATE NOT NULL,            -- sempre dia 1 do mês
+    ok               TINYINT(1) NOT NULL DEFAULT 1,
+    observacao       VARCHAR(500) NULL,
+    confirmado_em    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Um relatório por mês por projeto
+    UNIQUE KEY uq_relatorio_projeto_mes (id_projeto, mes_referencia),
+
+    -- Agora com ON DELETE CASCADE ✔
+    CONSTRAINT fk_rm_projeto
+        FOREIGN KEY (id_projeto)
+        REFERENCES tb_novo_projeto(id_projeto)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    -- Orientador permanece sem CASCADE (para não apagar relatórios ao excluir orientador)
+    CONSTRAINT fk_rm_orientador
+        FOREIGN KEY (id_orientador)
+        REFERENCES tb_cadastro_orientador(id_orientador)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
 
 CREATE TABLE IF NOT EXISTS tb_cadastro_secretaria (
   id_secretaria INT AUTO_INCREMENT PRIMARY KEY,

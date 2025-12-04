@@ -45,7 +45,7 @@ api.include_router(auth_controller)
 api.include_router(orientador_controller)
 api.include_router(projeto_controller)
 api.include_router(inscricao_controller)
-api.include_router(relatorio_controller)
+#api.include_router(relatorio_controller)
 api.include_router(avaliador_externo_controller)
 api.include_router(notificacao_controller)   # agora também em /api
 api.include_router(campus_controller)

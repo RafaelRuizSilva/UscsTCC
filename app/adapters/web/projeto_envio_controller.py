@@ -6,6 +6,8 @@ from app.adapters.email.smtp_email_sender_reset_password import SmtpEmailSender
 from app.core.use_cases.enviar_projeto_avaliadores_usecase import EnviarProjetoAvaliadoresUseCase
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
+from app.core.security import get_current_user
+
 
 class EnvioProjetoDTO(BaseModel):
     destinatarios: List[EmailStr] = Field(..., min_items=1, max_items=5)  # <= 5
@@ -23,6 +25,7 @@ def enviar_projeto_para_avaliadores(
     body: EnvioProjetoDTO = ...,
     db = Depends(get_db_conn),
     email_service: Annotated[SmtpEmailSender, Depends(get_email_service)] = None,
+    _sec: int = Depends(get_current_user("secretaria"))
 ):
     try:
         repo = ProjetoRepository(db)

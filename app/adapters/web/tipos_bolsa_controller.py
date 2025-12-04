@@ -31,6 +31,7 @@ def listar_tipos_bolsa(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     repo: Annotated[TipoBolsaRepository, Depends(get_repo)] = None,
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     return ListTipoBolsaUseCase(repo).execute(limit, offset)
 

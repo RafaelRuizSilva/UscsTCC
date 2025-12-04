@@ -11,6 +11,7 @@ from app.core.use_cases.list_avaliador_externo_usecase import ListAvaliadorExter
 from app.core.use_cases.get_avaliador_externo_usecase import GetAvaliadorExternoUseCase
 from app.core.use_cases.update_avaliador_externo_usecase import UpdateAvaliadorExternoUseCase
 from app.core.use_cases.delete_avaliador_externo_usecase import DeleteAvaliadorExternoUseCase
+from app.core.security import get_current_user
 
 router = APIRouter(prefix="/avaliadores-externos", tags=["AvaliadoresExternos"])
 
@@ -23,6 +24,7 @@ def get_repo(db=Depends(get_db_conn)) -> IAvaliadorExternoRepository:
 def cadastrar_avaliador_externo(
     avaliador: AvaliadorExternoCreate,
     repo: Annotated[IAvaliadorExternoRepository, Depends(get_repo)],
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     use_case = CreateAvaliadorExternoUseCase(repo)
     try:
@@ -40,6 +42,7 @@ def cadastrar_avaliador_externo(
 @router.get("", status_code=status.HTTP_200_OK)
 def listar_avaliadores_externos(
     repo: Annotated[IAvaliadorExternoRepository, Depends(get_repo)],
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     use_case = ListAvaliadorExternoUseCase(repo)
     try:
@@ -52,6 +55,7 @@ def listar_avaliadores_externos(
 def obter_avaliador_externo(
     id_avaliador: int,
     repo: Annotated[IAvaliadorExternoRepository, Depends(get_repo)],
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     use_case = GetAvaliadorExternoUseCase(repo)
     try:
@@ -70,6 +74,7 @@ def atualizar_avaliador_externo(
     id_avaliador: int,
     avaliador: AvaliadorExternoCreate,
     repo: Annotated[IAvaliadorExternoRepository, Depends(get_repo)],
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     use_case = UpdateAvaliadorExternoUseCase(repo)
     try:
@@ -87,6 +92,7 @@ def atualizar_avaliador_externo(
 def excluir_avaliador_externo(
     id_avaliador: int,
     repo: Annotated[IAvaliadorExternoRepository, Depends(get_repo)],
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     use_case = DeleteAvaliadorExternoUseCase(repo)
     try:

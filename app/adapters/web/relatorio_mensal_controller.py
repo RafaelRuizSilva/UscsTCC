@@ -58,7 +58,7 @@ def confirmar_relatorio_mensal(
     repo = RelatorioMensalRepository(db)
     usecase = ConfirmarRelatorioMensalUseCase(repo)
     try:
-        id_relatorio = usecase.execute(
+        result = usecase.execute(
             id_orientador=orientador_id,
             id_projeto=id_projeto,
             mes_ref=mes_ref,
@@ -66,12 +66,18 @@ def confirmar_relatorio_mensal(
             observacao=body.observacao
         )
 
-        # 🔔 Notificar a secretaria via RabbitMQ (não quebra a resposta se falhar)
+        id_relatorio = result["id_relatorio"]
+        nome_orientador = result["nome_orientador"]
+        titulo_projeto = result["titulo_projeto"]
+
+        # Notificação
         try:
             publisher = RabbitPublisher()
             publisher.publish({
                 "tipo": "Confirmacao - relatorio mensal",
-                "mensagem": f"O orientador {orientador_id} enviou o relatorio mensal do projeto {id_projeto} (mês {mes_ref.strftime('%Y-%m')})",
+                "mensagem": (
+                    f"{nome_orientador} enviou o relatório mensal do projeto '{titulo_projeto}' (mês {mes_ref.strftime('%Y-%m')})."
+                ),
                 "destinatario": "secretaria"
             })
         finally:
@@ -80,10 +86,6 @@ def confirmar_relatorio_mensal(
             except Exception:
                 pass
 
-        return {
-            "id_relatorio": id_relatorio,
-            "mensagem": f"Relatório de {mes_ref.strftime('%Y-%m')} confirmado com sucesso."
-        }
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception:
@@ -93,6 +95,7 @@ def confirmar_relatorio_mensal(
 def listar_relatorios_secretaria(
     mes: Optional[str] = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     db=Depends(get_db_conn),
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     mes_ref = _mes_param_to_date(mes)
     repo = RelatorioMensalRepository(db)
@@ -102,6 +105,7 @@ def listar_relatorios_secretaria(
 def listar_pendentes_secretaria(
     mes: Optional[str] = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     db=Depends(get_db_conn),
+    id_secretaria: int = Depends(get_current_user("secretaria"))
 ):
     mes_ref = _mes_param_to_date(mes)
     repo = RelatorioMensalRepository(db)

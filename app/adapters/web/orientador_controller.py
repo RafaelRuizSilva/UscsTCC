@@ -30,6 +30,7 @@ def inadimplentar_orientador_do_projeto(
     id_projeto: int = Path(..., ge=1),
     projeto_repo: Annotated[IProjetoRepository, Depends(get_projeto_repo)] = None,
     orientador_repo: Annotated[IOrientadorRepository, Depends(get_orientador_repo)] = None,
+    _sec: int = Depends(get_current_user("secretaria"))
 ):
     try:
         id_orientador = InadimplentarOrientadorDoProjetoUseCase(projeto_repo, orientador_repo).execute(id_projeto)
@@ -93,7 +94,8 @@ def obter_orientador_por_id(id: int = Path(..., ge=1), db=Depends(get_db_conn)):
     return result
 
 @router.put("/{id}/aprovar", status_code=status.HTTP_200_OK)
-def aprovar_orientador(id: int, db=Depends(get_db_conn)):
+def aprovar_orientador(id: int, db=Depends(get_db_conn),
+                       _sec: int = Depends(get_current_user("secretaria"))):
     repo = OrientadorRepository(db)
     try:
         AprovarOrientadorUseCase(repo).execute(id)
@@ -107,7 +109,8 @@ def aprovar_orientador(id: int, db=Depends(get_db_conn)):
 def atualizar_status_orientador(
     id: int,
     novo_status: str,
-    db=Depends(get_db_conn)
+    db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user("secretaria"))
 ):
     repo = OrientadorRepository(db)
     try:
@@ -120,7 +123,8 @@ def atualizar_status_orientador(
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar status do orientador: {e}")
 
 @router.put("/{id}/reprovar", status_code=status.HTTP_200_OK)
-def reprovar_orientador(id: int, db=Depends(get_db_conn)):
+def reprovar_orientador(id: int, db=Depends(get_db_conn),
+                        _sec: int = Depends(get_current_user("secretaria"))):
     repo = OrientadorRepository(db)
     try:
         ReprovarOrientadorUseCase(repo).execute(id)

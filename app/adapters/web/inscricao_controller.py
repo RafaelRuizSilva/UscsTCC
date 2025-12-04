@@ -46,7 +46,8 @@ def obter_inscricao_por_id(id_inscricao: int, repo: IInscricaoRepository = Depen
                             detail="Erro interno ao obter inscrição.")
 
 @router.delete("/{id_inscricao}", status_code=status.HTTP_204_NO_CONTENT)
-def excluir_inscricao(id_inscricao: int, repo: IInscricaoRepository = Depends(get_repo)):
+def excluir_inscricao(id_inscricao: int, repo: IInscricaoRepository = Depends(get_repo),
+                      id_secretaria: int = Depends(get_current_user("secretaria"))):
     use_case = ExcluirInscricaoUseCase(repo)
     try:
         use_case.execute(id_inscricao)

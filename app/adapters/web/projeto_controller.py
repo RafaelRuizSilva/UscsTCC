@@ -51,7 +51,8 @@ def get_meus_projetos(
     return {"projetos": projetos}
 
 @router.post("/")
-def cadastrar_projeto(projeto: Projeto, db=Depends(get_db_conn)):
+def cadastrar_projeto(projeto: Projeto, db=Depends(get_db_conn),
+                      _sec: int = Depends(get_current_user("secretaria"))):
     repo = ProjetoRepository(db)
     usecase = CreateProjetoUseCase(repo)
     try:
@@ -63,7 +64,8 @@ def cadastrar_projeto(projeto: Projeto, db=Depends(get_db_conn)):
         raise HTTPException(status_code=500, detail="Erro inesperado")
 
 @router.delete("/{id_projeto}")
-def deletar_projeto(id_projeto: int, db=Depends(get_db_conn)):
+def deletar_projeto(id_projeto: int, db=Depends(get_db_conn),
+                    _sec: int = Depends(get_current_user("secretaria"))):
     repo = ProjetoRepository(db)
     use_case = DeletarProjetoUseCase(repo)
     try:
@@ -78,7 +80,7 @@ def deletar_projeto(id_projeto: int, db=Depends(get_db_conn)):
 def concluir_projeto(
     id_projeto: int = Path(..., ge=1),
     db=Depends(get_db_conn),
-    orientador_id: int = Depends(get_current_user("secretaria")),  # ou secretaria se preferir
+    _sec: int = Depends(get_current_user("secretaria")),  # ou secretaria se preferir
 ):
     repo = ProjetoRepository(db)
     usecase = ConcluirProjetoUseCase(repo)

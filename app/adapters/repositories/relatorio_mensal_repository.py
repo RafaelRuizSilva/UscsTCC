@@ -7,35 +7,58 @@ class RelatorioMensalRepository(IRelatorioMensalRepository):
     def __init__(self, db_conn):
         self.db_conn = db_conn
 
-    def confirmar(self, id_orientador: int, id_projeto: int, mes_ref: date, ok: bool, observacao: Optional[str]) -> int:
+    def confirmar(self, id_orientador: int, id_projeto: int, mes_ref: date, ok: bool,
+                  observacao: Optional[str]) -> dict:
         cursor = self.db_conn.cursor()
         try:
-            # Garante que o projeto pertence ao orientador autenticado
+            # 1. Validar se o projeto pertence ao orientador
             cursor.execute(
-                "SELECT 1 FROM tb_novo_projeto WHERE id_projeto=%s AND id_orientador=%s LIMIT 1",
+                "SELECT titulo_projeto FROM tb_novo_projeto WHERE id_projeto=%s AND id_orientador=%s LIMIT 1",
                 (id_projeto, id_orientador)
             )
-            if not cursor.fetchone():
+            row = cursor.fetchone()
+
+            if not row:
                 raise PermissionError("Projeto não pertence ao orientador autenticado.")
 
-            # UPSERT por (id_projeto, mes_referencia)
+            titulo_projeto = row[0]
+
+            # 2. Buscar nome do orientador
+            cursor.execute(
+                "SELECT nome_completo FROM tb_cadastro_orientador WHERE id_orientador=%s LIMIT 1",
+                (id_orientador,)
+            )
+            row2 = cursor.fetchone()
+
+            nome_orientador = row2[0] if row2 else f"Orientador {id_orientador}"
+
+            # 3. UPSERT
             query = """
                 INSERT INTO tb_relatorio_mensal (id_projeto, id_orientador, mes_referencia, ok, observacao)
                 VALUES (%s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
-                  ok = VALUES(ok),
-                  observacao = VALUES(observacao),
-                  confirmado_em = CURRENT_TIMESTAMP
+                    ok = VALUES(ok),
+                    observacao = VALUES(observacao),
+                    confirmado_em = CURRENT_TIMESTAMP
             """
             cursor.execute(query, (id_projeto, id_orientador, mes_ref, int(ok), observacao))
             self.db_conn.commit()
 
+            # 4. Buscar id_relatorio
             cursor.execute(
                 "SELECT id_relatorio FROM tb_relatorio_mensal WHERE id_projeto=%s AND mes_referencia=%s",
                 (id_projeto, mes_ref)
             )
             row = cursor.fetchone()
-            return int(row[0])
+            id_relatorio = int(row[0])
+
+            # 5. Retornar tudo
+            return {
+                "id_relatorio": id_relatorio,
+                "titulo_projeto": titulo_projeto,
+                "nome_orientador": nome_orientador
+            }
+
         finally:
             cursor.close()
 

@@ -8,12 +8,3 @@ class UpdateProjetoAlunosUseCase:
 
     def execute(self, dto: UpdateProjetoAlunosDTO):
         self.gateway.atualizar_alunos_projeto(dto.id_projeto, dto.id_alunos)
-
-        # Notificar a secretaria via RabbitMQ
-        publisher = RabbitPublisher()
-        publisher.publish({
-            "tipo": "atualizacao_alunos",
-            "mensagem": f"Alunos do projeto {dto.id_projeto} foram atualizados.",
-            "destinatario": "secretaria"
-        })
-        publisher.close()

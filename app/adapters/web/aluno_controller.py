@@ -28,6 +28,7 @@ def inadimplentar_todos_alunos_do_projeto(
     id_projeto: int = Path(..., ge=1),
     projeto_repo: Annotated[IProjetoRepository, Depends(get_projeto_repo)] = None,
     aluno_repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)] = None,
+    _sec: int = Depends(get_current_user("secretaria"))
 ):
     try:
         total = InadimplentarTodosAlunosDoProjetoUseCase(projeto_repo, aluno_repo).execute(id_projeto)
@@ -109,7 +110,8 @@ def obter_aluno_por_id(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(
         raise HTTPException(status_code=500, detail=f"Erro interno ao buscar aluno: {e}")
 
 @router.put("/{aluno_id}/aprovar", status_code=status.HTTP_200_OK)
-def aprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
+def aprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)],
+                  _sec: int = Depends(get_current_user("secretaria"))):
     try:
         AprovarAlunoUseCase(repo).execute(aluno_id)
         return {"mensagem": "Aluno aprovado com sucesso"}
@@ -119,7 +121,8 @@ def aprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_a
         raise HTTPException(status_code=500, detail=f"Erro ao aprovar aluno: {e}")
 
 @router.put("/{aluno_id}/reprovar", status_code=status.HTTP_200_OK)
-def reprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
+def reprovar_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)],
+                   _sec: int = Depends(get_current_user("secretaria"))):
     try:
         ReprovarAlunoUseCase(repo).execute(aluno_id)
         return {"mensagem": "Aluno reprovado e marcado como inadimplente por 2 anos"}
@@ -144,6 +147,7 @@ def atualizar_status(
     aluno_id: int,
     novo_status: str,
     repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)],
+    _sec: int = Depends(get_current_user("secretaria"))
 ):
     try:
         # Chama o métod update_status do repositório para atualizar o status do aluno
@@ -156,7 +160,8 @@ def atualizar_status(
 
 
 @router.delete("/{aluno_id}", status_code=status.HTTP_204_NO_CONTENT)
-def excluir_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)]):
+def excluir_aluno(aluno_id: int, repo: Annotated[IAlunoRepository, Depends(get_aluno_repo)],
+                  _sec: int = Depends(get_current_user("secretaria"))):
     try:
         DeleteAlunoUseCase(repo).execute(aluno_id)
     except ValueError as e:
