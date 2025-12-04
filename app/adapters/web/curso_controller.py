@@ -20,15 +20,13 @@ def cadastrar_curso(curso: Curso, db=Depends(get_db_conn),
    return {"id": curso_id, "mensagem": "Curso cadastrado com sucesso"}
 
 @router.get("/")
-def get_cursos(db=Depends(get_db_conn),
-               id_secretaria: int = Depends(get_current_user("secretaria"))):
+def get_cursos(db=Depends(get_db_conn)):
     repo = CursoRepository(db)
     cursos = repo.get_all()
     return {"cursos": cursos}
 
 @router.get("/{curso_id}", response_model=Curso)
-def get_curso_by_id(curso_id: int, db=Depends(get_db_conn),
-                    id_secretaria: int = Depends(get_current_user("secretaria"))):
+def get_curso_by_id(curso_id: int, db=Depends(get_db_conn)):
     repo = CursoRepository(db)
     usecase = GetCursoByIdUseCase(repo)
     curso = usecase.execute(curso_id)

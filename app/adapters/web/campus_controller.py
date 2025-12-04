@@ -19,15 +19,13 @@ def cadastrar_campus(campus: Campus, db=Depends(get_db_conn),
    return {"id": campus_id, "mensagem": "Campus cadastrado com sucesso"}
 
 @router.get("/")
-def get_campus(db=Depends(get_db_conn),
-               id_secretaria: int = Depends(get_current_user("secretaria"))):
+def get_campus(db=Depends(get_db_conn)):
     repo = CampusRepository(db)
     campus = repo.get_all()
     return {"campus": campus}
 
 @router.get("/{campus_id}", response_model=Campus)
-def get_campus_by_id(campus_id: int, db=Depends(get_db_conn),
-                     id_secretaria: int = Depends(get_current_user("secretaria"))):
+def get_campus_by_id(campus_id: int, db=Depends(get_db_conn)):
     repo = CampusRepository(db)
     usecase = GetCampusByIdUseCase(repo)
     campus = usecase.execute(campus_id)
