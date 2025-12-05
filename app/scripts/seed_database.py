@@ -210,6 +210,28 @@ def insert_relatorios(cursor):
                 1
             ))
 
+def insert_inscricoes(cursor):
+    """
+    Popula a tabela tb_inscricao_projeto com inscrições simples:
+    cada aluno se inscreve em 1 projeto aleatório.
+    """
+
+    cursor.execute("SELECT id_aluno FROM tb_cadastro_aluno")
+    alunos = [row[0] for row in cursor.fetchall()]
+
+    cursor.execute("SELECT id_projeto FROM tb_novo_projeto")
+    projetos = [row[0] for row in cursor.fetchall()]
+
+    for aluno in alunos:
+        projeto_escolhido = fake.random_element(projetos)
+
+        cursor.execute("""
+            INSERT IGNORE INTO tb_inscricao_projeto (id_aluno, id_projeto)
+            VALUES (%s, %s)
+        """, (aluno, projeto_escolhido))
+
+    return len(alunos)
+
 
 # =====================================================
 # 📌 Execução Principal
@@ -236,6 +258,9 @@ def popular_banco():
 
         print("Vinculando alunos a projetos...")
         insert_projeto_alunos(cursor)
+
+        print("Inserindo inscrições dos alunos (tb_inscricao_projeto)...")
+        insert_inscricoes(cursor)
 
         print("Inserindo avaliadores externos...")
         insert_avaliadores(cursor)
