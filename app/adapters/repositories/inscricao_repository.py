@@ -8,7 +8,6 @@ class InscricaoRepository(IInscricaoRepository):
     def create(self, id_aluno: int, id_projeto: int) -> int:
         cursor = self.db_conn.cursor()
         try:
-            # 1) Inserir na tabela de inscrição
             cursor.execute(
                 """
                 INSERT INTO tb_inscricao_projeto (id_aluno, id_projeto)
@@ -17,19 +16,7 @@ class InscricaoRepository(IInscricaoRepository):
                 (id_aluno, id_projeto),
             )
             id_inscricao = cursor.lastrowid
-
-            # 2) Inserir também na tabela de projeto_aluno
-            cursor.execute(
-                """
-                INSERT INTO tb_projeto_aluno (id_aluno, id_projeto, status_aluno)
-                VALUES (%s, %s, %s)
-                """,
-                (id_aluno, id_projeto, False),
-            )
-
-            # Commit da transação inteira
             self.db_conn.commit()
-
             return id_inscricao
 
         except IntegrityError as err:
@@ -91,7 +78,6 @@ class InscricaoRepository(IInscricaoRepository):
         finally:
             cursor.close()
 
-    # ✅ SECRETARIA: inscrições de um projeto, com dados do aluno
     def list_by_projeto(self, id_projeto: int) -> list[dict]:
         cursor = self.db_conn.cursor()
         try:
@@ -107,7 +93,6 @@ class InscricaoRepository(IInscricaoRepository):
                        i.created_at
                   FROM tb_inscricao_projeto i
                   INNER JOIN tb_cadastro_aluno a ON a.id_aluno = i.id_aluno
-                  INNER JOIN tb_projeto_aluno as b ON a.id_aluno = b.id_aluno
                  WHERE i.id_projeto = %s
               ORDER BY i.created_at DESC
                 """,
@@ -129,3 +114,52 @@ class InscricaoRepository(IInscricaoRepository):
             ]
         finally:
             cursor.close()
+
+    def list_by_aluno(self, id_aluno: int) -> list[dict]:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT i.id_inscricao,
+                       i.id_projeto,
+                       i.created_at,
+                       p.titulo_projeto,
+                       p.cod_projeto
+                  FROM tb_inscricao_projeto i
+                  JOIN tb_novo_projeto p ON p.id_projeto = i.id_projeto
+                 WHERE i.id_aluno = %s
+              ORDER BY i.created_at DESC
+                """,
+                (id_aluno,),
+            )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id_inscricao": r[0],
+                    "id_projeto": r[1],
+                    "created_at": r[2].isoformat() if r[2] else None,
+                    "titulo_projeto": r[3],
+                    "cod_projeto": r[4],
+                }
+                for r in rows
+            ]
+        finally:
+            cursor.close()
+
+    def existe_aluno_definitivo_por_projeto(self, id_projeto: int) -> bool:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT 1
+                  FROM tb_projeto_aluno
+                 WHERE id_projeto = %s
+                   AND status_aluno = TRUE
+                 LIMIT 1
+                """,
+                (id_projeto,),
+            )
+            return cursor.fetchone() is not None
+        finally:
+            cursor.close()
+

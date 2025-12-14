@@ -8,7 +8,7 @@ from app.dependencies.db import get_db_conn
 from app.adapters.repositories.atualiza_aluno_projeto_repository import ProjetoGateway
 from app.core.security import get_current_user
 from app.core.models.upd_aluno_projeto_model import UpdateProjetoAlunosDTO
-from app.core.use_cases.atualizar_alunos_projeto import UpdateProjetoAlunosUseCase
+from app.core.use_cases.atualizar_alunos_projeto_usecase import UpdateProjetoAlunosUseCase, SelecaoJaFinalizadaError
 from app.core.use_cases.listar_projetos_por_orientador_usecase import ListarProjetosPorOrientadorUseCase
 from app.adapters.message.rabbit_publisher import RabbitPublisher
 from app.adapters.repositories.inscricao_repository import InscricaoRepository
@@ -31,7 +31,6 @@ from app.core.use_cases.lista_projetos_paginados_usecase import (
     ListarProjetosPorOrientadorPaginadoUseCase,
 )
 from app.core.use_cases.concluir_projeto_usecase import ConcluirProjetoUseCase
-
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
@@ -107,17 +106,18 @@ def update_alunos_projeto(
     orientador_id: int = Depends(get_current_user("orientador")),
 ):
     try:
-        # Recupera o repositório e o use case
         gateway = ProjetoGateway(db)
-        usecase = UpdateProjetoAlunosUseCase(gateway)
+        inscricao_repo = InscricaoRepository(db)
+        usecase = UpdateProjetoAlunosUseCase(gateway, inscricao_repo)
 
-        # Atualiza os alunos
-        usecase.execute(dto)
+        usecase.execute(dto, orientador_id)
 
-        # 🔔 Notifica a secretaria com o título do projeto
         cursor = db.cursor()
         try:
-            cursor.execute("SELECT titulo_projeto FROM tb_novo_projeto WHERE id_projeto = %s", (dto.id_projeto,))
+            cursor.execute(
+                "SELECT titulo_projeto FROM tb_novo_projeto WHERE id_projeto = %s",
+                (dto.id_projeto,),
+            )
             row = cursor.fetchone()
 
             if row:
@@ -125,26 +125,28 @@ def update_alunos_projeto(
             else:
                 raise ValueError(f"Projeto com ID {dto.id_projeto} não encontrado.")
 
-            # Notifica secretaria com o título do projeto
             publisher = None
             try:
                 publisher = RabbitPublisher()
-                publisher.publish({
-                    "tipo": "Atualização de alunos",
-                    "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
-                    "destinatario": "secretaria",
-                })
+                publisher.publish(
+                    {
+                        "tipo": "Atualização de alunos",
+                        "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
+                        "destinatario": "secretaria",
+                    }
+                )
             finally:
                 try:
                     if publisher:
                         publisher.close()
                 except Exception:
                     pass
-
         finally:
             cursor.close()
 
         return {"mensagem": "Alunos atualizados com sucesso"}
+    except SelecaoJaFinalizadaError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -389,5 +391,25 @@ def baixar_monografia_final_pdf(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+from app.core.use_cases.listar_projetos_por_aluno_paginado_usecase import (
+    ListarProjetosPorAlunoPaginadoUseCase
+)
+
+@router.get("/aluno/me")
+def listar_projetos_do_aluno(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+    db=Depends(get_db_conn),
+    aluno_id: int = Depends(get_current_user("aluno")),
+):
+    repo = ProjetoRepository(db)
+    usecase = ListarProjetosPorAlunoPaginadoUseCase(repo)
+
+    return usecase.execute(
+        id_aluno=aluno_id,
+        page=page,
+        page_size=page_size
+    )
 
 

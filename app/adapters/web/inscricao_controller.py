@@ -16,6 +16,7 @@ from app.adapters.repositories.aluno_repository import AlunoRepository
 from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.adapters.repositories.orientador_repository import OrientadorRepository
 from app.dependencies.db import get_db_conn
+from app.core.use_cases.list_inscricao_por_aluno_usecase import ListarInscricoesPorAlunoUseCase
 
 router = APIRouter(prefix="/inscricao", tags=['Inscrição'])
 
@@ -30,6 +31,20 @@ def listar_inscricoes(repo: IInscricaoRepository = Depends(get_repo)):
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=f"Erro interno ao listar inscrições. {ex}")
+    
+@router.get("/minhas", status_code=status.HTTP_200_OK)
+def listar_minhas_inscricoes(
+    repo: IInscricaoRepository = Depends(get_repo),
+    id_aluno: int = Depends(get_current_user("aluno")),
+):
+    use_case = ListarInscricoesPorAlunoUseCase(repo)
+    try:
+        return use_case.execute(id_aluno)
+    except Exception as ex:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro interno ao listar minhas inscrições. {ex}",
+        )
 
 @router.get("/{id_inscricao}", status_code=status.HTTP_200_OK)
 def obter_inscricao_por_id(id_inscricao: int, repo: IInscricaoRepository = Depends(get_repo)):

@@ -202,6 +202,7 @@ class ProjetoRepository:
                   FROM tb_projeto_aluno pa
                   JOIN tb_cadastro_aluno a ON a.id_aluno = pa.id_aluno
                  WHERE pa.id_projeto = %s
+                   AND pa.status_aluno = TRUE
               ORDER BY a.nome_completo ASC
                 """,
                 (id_projeto,),
@@ -219,8 +220,6 @@ class ProjetoRepository:
         finally:
             cursor.close()
 
-    # ---- novos helpers para 'ideia_inicial' (DOCX) e 'ideia_inicial_pdf' ----
-    # (corrige o typo "incicial" e mantém métodos claros)
     def update_ideia_inicial_file(self, id_projeto: int, data: bytes) -> None:
         if not data:
             raise ValueError("Arquivo DOCX inválido.")
@@ -263,7 +262,6 @@ class ProjetoRepository:
         finally:
             c.close()
 
-    # meta para envio por e-mail (prioriza final PDF > parcial PDF > ideia_inicial_pdf)
     def get_meta_e_pdf(self, id_projeto: int):
         cur = self.db_conn.cursor()
         try:
@@ -327,7 +325,6 @@ class ProjetoRepository:
         finally:
             c.close()
 
-    # (mantidos, sem mudanças)
     def salvar_envio_avaliadores(self, id_projeto: int, destinatarios: list) -> None:
         cursor = self.db_conn.cursor()
         try:
@@ -504,8 +501,9 @@ class ProjetoRepository:
                 SELECT pa.id_aluno
                   FROM tb_projeto_aluno pa
                  WHERE pa.id_projeto = %s
+                   AND pa.status_aluno = TRUE
                 """,
-                (id_projeto,)
+                (id_projeto,),
             )
             rows = cur.fetchall()
             return [r[0] for r in rows]
@@ -537,3 +535,77 @@ class ProjetoRepository:
             return row[0]
         finally:
             cur.close()
+
+    def listar_por_aluno_paginado(
+            self,
+            id_aluno: int,
+            limit: int,
+            offset: int
+    ) -> Dict:
+        cursor = self.db_conn.cursor()
+        try:
+            # total
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                  FROM tb_projeto_aluno pa
+                 WHERE pa.id_aluno = %s
+                   AND pa.status_aluno = TRUE
+                """,
+                (id_aluno,)
+            )
+            total = int(cursor.fetchone()[0] or 0)
+
+            # page
+            cursor.execute(
+                """
+                SELECT p.id_projeto,
+                       p.cod_projeto,
+                       p.titulo_projeto,
+                       p.resumo,
+                       o.nome_completo AS orientador,
+                       c.campus,
+                       IF(p.ideia_inicial         IS NULL, 0, 1) AS has_ideia_inicial,
+                       IF(p.ideia_inicial_pdf     IS NULL, 0, 1) AS has_ideia_inicial_pdf,
+                       IF(p.mon_parcial_docx_file IS NULL, 0, 1) AS has_mon_parcial_docx,
+                       IF(p.mon_parcial_pdf_file  IS NULL, 0, 1) AS has_mon_parcial_pdf,
+                       IF(p.mon_final_docx_file   IS NULL, 0, 1) AS has_mon_final_docx,
+                       IF(p.mon_final_pdf_file    IS NULL, 0, 1) AS has_mon_final_pdf
+                  FROM tb_projeto_aluno pa
+                  JOIN tb_novo_projeto p   ON p.id_projeto = pa.id_projeto
+             LEFT JOIN tb_cadastro_orientador o ON o.id_orientador = p.id_orientador
+             LEFT JOIN tb_campus c               ON c.id_campus = p.id_campus
+                 WHERE pa.id_aluno = %s
+                   AND pa.status_aluno = TRUE
+              ORDER BY p.id_projeto DESC
+                 LIMIT %s OFFSET %s
+                """,
+                (id_aluno, limit, offset),
+            )
+
+            rows = cursor.fetchall()
+
+            items = [
+                {
+                    "id_projeto": r[0],
+                    "cod_projeto": r[1],
+                    "titulo_projeto": r[2],
+                    "resumo": r[3],
+                    "orientador": r[4],
+                    "campus": r[5],
+                    "has_ideia_inicial": bool(r[6]),
+                    "has_ideia_inicial_pdf": bool(r[7]),
+                    "has_mon_parcial_docx": bool(r[8]),
+                    "has_mon_parcial_pdf": bool(r[9]),
+                    "has_mon_final_docx": bool(r[10]),
+                    "has_mon_final_pdf": bool(r[11]),
+                }
+                for r in rows
+            ]
+
+            return {
+                "total": total,
+                "items": items
+            }
+        finally:
+            cursor.close()

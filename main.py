@@ -63,7 +63,7 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:4200",
-    "https://meu-frontend.com",
+    "http://ic.inovauscs.tech",
 ]
 app.add_middleware(
     CORSMiddleware,

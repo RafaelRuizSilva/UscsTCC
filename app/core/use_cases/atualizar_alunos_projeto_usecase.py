@@ -1,19 +1,32 @@
+from typing import Optional
+
 from app.core.models.upd_aluno_projeto_model import UpdateProjetoAlunosDTO
+from app.core.ports.output.porta_upd_aluno_projeto import IProjetoGateway
+from app.core.ports.output.porta_inscricao_repository import IInscricaoRepository
+
+
+class SelecaoJaFinalizadaError(Exception):
+    """Disparada quando tentam atualizar alunos de um projeto já finalizado."""
+    pass
+
 
 class UpdateProjetoAlunosUseCase:
-    def __init__(self, gateway):
+    def __init__(self, gateway: IProjetoGateway, inscricao_repo: IInscricaoRepository):
         self.gateway = gateway
+        self.inscricao_repo = inscricao_repo
 
-    def execute(self, dto: UpdateProjetoAlunosDTO, orientador_id: int | None = None) -> None:
-        # validações simples (IDs únicos e limite já garantidos no DTO)
-        ids = dto.alunos_ids or []
+    def execute(self, dto: UpdateProjetoAlunosDTO, orientador_id: Optional[int] = None) -> None:
+        ids = dto.id_alunos or []
+
         if len(ids) != len(set(ids)):
             raise ValueError("Lista de alunos contém IDs duplicados.")
+
         if len(ids) > 4:
             raise ValueError("Máximo de 4 alunos por projeto.")
 
-        # (opcional) valida posse do projeto — se quiser, traga o id_orientador e compare
-        # Deixei leve porque seu gateway atual não expõe essa consulta
+        if self.inscricao_repo.existe_aluno_definitivo_por_projeto(dto.id_projeto):
+            raise SelecaoJaFinalizadaError(
+                "A seleção de alunos para este projeto já foi finalizada."
+            )
 
-        # aplica
         self.gateway.atualizar_alunos_projeto(dto.id_projeto, ids)
