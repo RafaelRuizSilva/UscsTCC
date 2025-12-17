@@ -7,7 +7,7 @@ class Notificacao(BaseModel):
     mensagem: str
     destinatario: str  # Ex: "secretaria", "aluno", etc.
     lida: bool = False
-    data_criacao: datetime = Field(default_factory=datetime.utcnow)
+    data_criacao: datetime = Field(default_factory=datetime.now())
 
 class NotificacaoCreate(BaseModel):
     tipo: str

@@ -24,7 +24,9 @@ def get_repo(db=Depends(get_db_conn)) -> IInscricaoRepository:
     return InscricaoRepository(db)
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def listar_inscricoes(repo: IInscricaoRepository = Depends(get_repo)):
+def listar_inscricoes(repo: IInscricaoRepository = Depends(get_repo),
+                      _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+                      ):
     use_case = ListarInscricoesUseCase(repo)
     try:
         return use_case.execute()
@@ -47,7 +49,9 @@ def listar_minhas_inscricoes(
         )
 
 @router.get("/{id_inscricao}", status_code=status.HTTP_200_OK)
-def obter_inscricao_por_id(id_inscricao: int, repo: IInscricaoRepository = Depends(get_repo)):
+def obter_inscricao_por_id(id_inscricao: int, repo: IInscricaoRepository = Depends(get_repo),
+                           _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+                           ):
     use_case = ObterInscricaoPorIdUseCase(repo)
     try:
         data = use_case.execute(id_inscricao)

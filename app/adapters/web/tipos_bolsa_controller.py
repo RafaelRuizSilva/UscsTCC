@@ -11,8 +11,10 @@ from app.core.models.tipo_bolsa import TipoBolsaCreate, TipoBolsaOut
 
 router = APIRouter(prefix="/tipos-bolsa", tags=["Tipos de Bolsa"])
 
+
 def get_repo(db=Depends(get_db_conn)):
     return TipoBolsaRepository(db)
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def criar_tipo_bolsa(
@@ -25,15 +27,28 @@ def criar_tipo_bolsa(
         return {"id_tipo_bolsa": new_id, "mensagem": "Tipo de bolsa criado"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao criar tipo de bolsa: {e}"
+        )
+
 
 @router.get("/", response_model=List[TipoBolsaOut])
 def listar_tipos_bolsa(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     repo: Annotated[TipoBolsaRepository, Depends(get_repo)] = None,
-    id_secretaria: int = Depends(get_current_user("secretaria"))
+    id_secretaria: int = Depends(get_current_user("secretaria")),
 ):
-    return ListTipoBolsaUseCase(repo).execute(limit, offset)
+    try:
+        return ListTipoBolsaUseCase(repo).execute(limit, offset)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao listar tipos de bolsa: {e}"
+        )
+
 
 @router.delete("/{id_tipo_bolsa}", status_code=status.HTTP_200_OK)
 def deletar_tipo_bolsa(
@@ -46,3 +61,8 @@ def deletar_tipo_bolsa(
         return {"mensagem": "Tipo de bolsa removido"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao remover tipo de bolsa: {e}"
+        )

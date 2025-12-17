@@ -2,12 +2,14 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
 from app.configs import settings  # pegar SECRET_KEY do settings
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from typing import Union, List
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+security = HTTPBearer()
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -42,19 +44,43 @@ def verificar_token(token: str):
     except jwt.PyJWTError:
         raise ValueError("Token inválido")
 
-def get_current_user(role_esperado: str):
-    def _dependency(token: str = Depends(oauth2_scheme)):
+def get_current_user(roles_esperados: Union[str, List[str]]):
+    if isinstance(roles_esperados, str):
+        roles_esperados = [roles_esperados]
+
+    def _dependency(
+        credentials: HTTPAuthorizationCredentials = Depends(security)
+    ):
+        if not credentials:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token não informado",
+            )
+
+        token = credentials.credentials
+
         try:
-            payload = verificar_token(token)
-            role = payload.get("role")
-            user_id = payload.get("sub")
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expirado",
+            )
+        except jwt.PyJWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token inválido",
+            )
 
-            if role != role_esperado:
-                raise HTTPException(status_code=403, detail="Acesso negado ao tipo de usuário")
+        role = payload.get("role")
+        user_id = payload.get("sub")
 
-            return user_id  # ou return payload se quiser o pacote completo
+        if role not in roles_esperados:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso negado",
+            )
 
-        except ValueError as e:
-            raise HTTPException(status_code=401, detail=str(e))
+        return user_id
 
     return _dependency

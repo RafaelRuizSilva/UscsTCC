@@ -1,5 +1,6 @@
 from typing import List, Optional
 from datetime import date
+from datetime import datetime
 from app.core.models.relatorio_mensal import RelatorioMensalOut, PendenciaOut, RelatorioMensalSecretariaOut, PendenciaSecretariaOut
 from app.core.ports.output.porta_relatorio_mensal_repository import IRelatorioMensalRepository
 
@@ -39,9 +40,9 @@ class RelatorioMensalRepository(IRelatorioMensalRepository):
                 ON DUPLICATE KEY UPDATE
                     ok = VALUES(ok),
                     observacao = VALUES(observacao),
-                    confirmado_em = CURRENT_TIMESTAMP
+                    confirmado_em = %s
             """
-            cursor.execute(query, (id_projeto, id_orientador, mes_ref, int(ok), observacao))
+            cursor.execute(query, (id_projeto, id_orientador, mes_ref, int(ok), observacao, datetime.now()))
             self.db_conn.commit()
 
             # 4. Buscar id_relatorio

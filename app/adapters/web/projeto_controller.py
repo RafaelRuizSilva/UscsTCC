@@ -158,14 +158,32 @@ def listar_projetos(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador', 'aluno'])),
 ):
-    return ListarProjetosPaginadoUseCase(repo).execute(page=page, page_size=page_size)
+    try:
+        return ListarProjetosPaginadoUseCase(repo).execute(
+            page=page,
+            page_size=page_size
+        )
+
+    except ValueError as e:
+        # erro de regra de negócio (ex: página inválida, etc)
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except Exception as e:
+        # erro inesperado
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao listar projetos: {str(e)}"
+        )
+
 
 
 @router.get("/{id_projeto}/alunos")
 def listar_alunos_do_projeto(
     id_projeto: int = Path(..., ge=1),
     db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         repo = ProjetoRepository(db)
@@ -179,6 +197,7 @@ def listar_alunos_do_projeto(
 def listar_inscricoes_do_projeto(
     id_projeto: int = Path(..., ge=1),
     db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         insc_repo = InscricaoRepository(db)
@@ -210,6 +229,7 @@ def upload_mon_parcial_docx(
     id_projeto: int = Path(..., ge=1),
     arquivo: UploadFile = File(...),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         fn = (arquivo.filename or "").lower()
@@ -232,6 +252,7 @@ def upload_mon_parcial_pdf(
     id_projeto: int = Path(..., ge=1),
     arquivo: UploadFile = File(...),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         fn = (arquivo.filename or "").lower()
@@ -256,6 +277,7 @@ def upload_mon_final_docx(
     id_projeto: int = Path(..., ge=1),
     arquivo: UploadFile = File(...),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         fn = (arquivo.filename or "").lower()
@@ -278,6 +300,7 @@ def upload_mon_final_pdf(
     id_projeto: int = Path(..., ge=1),
     arquivo: UploadFile = File(...),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         fn = (arquivo.filename or "").lower()
@@ -300,6 +323,7 @@ def upload_mon_final_pdf(
 def baixar_ideia_inicial_docx(
     id_projeto: int = Path(..., ge=1),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         data = GetIdeiaInicialDocxUseCase(repo).execute(id_projeto)
@@ -316,6 +340,7 @@ def baixar_ideia_inicial_docx(
 def baixar_ideia_inicial_pdf(
     id_projeto: int = Path(..., ge=1),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         data = GetIdeiaInicialPdfUseCase(repo).execute(id_projeto)
@@ -332,6 +357,7 @@ def baixar_ideia_inicial_pdf(
 def baixar_monografia_parcial_docx(
     id_projeto: int = Path(..., ge=1),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         data = GetMonParcialDocxUseCase(repo).execute(id_projeto)
@@ -348,6 +374,7 @@ def baixar_monografia_parcial_docx(
 def baixar_monografia_parcial_pdf(
     id_projeto: int = Path(..., ge=1),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         data = GetMonParcialPdfUseCase(repo).execute(id_projeto)
@@ -364,6 +391,7 @@ def baixar_monografia_parcial_pdf(
 def baixar_monografia_final_docx(
     id_projeto: int = Path(..., ge=1),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         data = GetMonFinalDocxUseCase(repo).execute(id_projeto)
@@ -381,6 +409,7 @@ def baixar_monografia_final_docx(
 def baixar_monografia_final_pdf(
     id_projeto: int = Path(..., ge=1),
     repo: Annotated[IProjetoRepository, Depends(get_repo)] = None,
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador'])),
 ):
     try:
         data = GetMonFinalPdfUseCase(repo).execute(id_projeto)
@@ -411,5 +440,3 @@ def listar_projetos_do_aluno(
         page=page,
         page_size=page_size
     )
-
-

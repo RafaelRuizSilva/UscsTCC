@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from app.core.models.orientador import Orientador
 from app.core.models.orientador_out import OrientadorOut
@@ -11,7 +11,6 @@ from app.dependencies.db import get_db_conn
 from app.core.security import get_current_user
 from app.core.use_cases.aprovar_orientador_usecase import AprovarOrientadorUseCase
 from app.core.use_cases.reprovar_orientador_usecase import ReprovarOrientadorUseCase
-from typing import Annotated
 from app.core.ports.output.porta_projeto_repository import IProjetoRepository
 from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.core.ports.output.porta_orientador_repository import IOrientadorRepository
@@ -19,11 +18,14 @@ from app.core.use_cases.inadimplentar_orientador_projeto_usecase import Inadimpl
 
 router = APIRouter(prefix="/orientadores", tags=["Orientadores"])
 
+
 def get_projeto_repo(db=Depends(get_db_conn)) -> IProjetoRepository:
     return ProjetoRepository(db)
 
+
 def get_orientador_repo(db=Depends(get_db_conn)) -> IOrientadorRepository:
     return OrientadorRepository(db)
+
 
 @router.post("/{id_projeto}/inadimplentar-orientador", status_code=status.HTTP_200_OK)
 def inadimplentar_orientador_do_projeto(
@@ -33,15 +35,24 @@ def inadimplentar_orientador_do_projeto(
     _sec: int = Depends(get_current_user("secretaria"))
 ):
     try:
-        id_orientador = InadimplentarOrientadorDoProjetoUseCase(projeto_repo, orientador_repo).execute(id_projeto)
+        id_orientador = InadimplentarOrientadorDoProjetoUseCase(
+            projeto_repo, orientador_repo
+        ).execute(id_projeto)
+
         return {
             "mensagem": "Orientador reprovado e marcado como inadimplente por 2 anos.",
             "id_orientador": id_orientador
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao inadimplentar orientador do projeto: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao inadimplentar orientador do projeto: {e}"
+        )
+
 
 @router.post("/")
 def cadastrar_orientador(orientador: Orientador, db=Depends(get_db_conn)):
@@ -52,58 +63,134 @@ def cadastrar_orientador(orientador: Orientador, db=Depends(get_db_conn)):
         return {"id": orientador_id, "mensagem": "Orientador cadastrado com sucesso"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro inesperado: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro inesperado: {e}"
+        )
+
 
 @router.get("/painel-orientador")
 def painel(user_id: int = Depends(get_current_user("orientador"))):
     return {"msg": f"Orientador autenticado: ID {user_id}"}
 
+
 @router.get("/", response_model=List[OrientadorOut])
-def listar_todos_orientadores(db=Depends(get_db_conn)):
+def listar_todos_orientadores(db=Depends(get_db_conn),
+                              _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+                              ):
     repo = OrientadorRepository(db)
-    usecase = ListarTodosOrientadoresUseCase(repo)
-    return usecase.execute()
+    try:
+        return ListarTodosOrientadoresUseCase(repo).execute()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao listar orientadores: {e}"
+        )
+
 
 @router.get("/buscar", response_model=OrientadorOut)
-def obter_orientador_por_nome(nome: str = Query(..., min_length=1), db=Depends(get_db_conn)):
+def obter_orientador_por_nome(
+    nome: str = Query(..., min_length=1),
+    db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+
+):
     repo = OrientadorRepository(db)
     usecase = ObterOrientadorPorNomeUseCase(repo)
-    result = usecase.execute(nome)
-    if not result:
-        raise HTTPException(status_code=404, detail="Orientador não encontrado pelo nome informado")
-    return result
+    try:
+        result = usecase.execute(nome)
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail="Orientador não encontrado pelo nome informado"
+            )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao buscar orientador por nome: {e}"
+        )
+
 
 @router.get("/aprovados")
-def listar_aprovados(db=Depends(get_db_conn)):
+def listar_aprovados(db=Depends(get_db_conn),
+                     _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+                     ):
     repo = OrientadorRepository(db)
-    return repo.listar_aprovados()
+    try:
+        return repo.listar_aprovados()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao listar orientadores aprovados: {e}"
+        )
+
 
 @router.get("/inadimplentes", status_code=status.HTTP_200_OK)
-def listar_inadimplentes(db=Depends(get_db_conn)):
+def listar_inadimplentes(db=Depends(get_db_conn),
+                         _sec: int = Depends(get_current_user('secretaria'))
+                         ):
     repo = OrientadorRepository(db)
-    return {"orientadores": repo.list_inadimplentes()}
+    try:
+        return {"orientadores": repo.list_inadimplentes()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao listar orientadores inadimplentes: {e}"
+        )
+
 
 @router.get("/{id}", response_model=OrientadorOut)
-def obter_orientador_por_id(id: int = Path(..., ge=1), db=Depends(get_db_conn)):
+def obter_orientador_por_id(id: int = Path(..., ge=1), db=Depends(get_db_conn),
+                            _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+                            ):
     repo = OrientadorRepository(db)
     usecase = ObterOrientadorPorIdUseCase(repo)
-    result = usecase.execute(id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Orientador não encontrado")
-    return result
+    try:
+        result = usecase.execute(id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Orientador não encontrado")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao buscar orientador: {e}"
+        )
+
 
 @router.put("/{id}/aprovar", status_code=status.HTTP_200_OK)
-def aprovar_orientador(id: int, db=Depends(get_db_conn),
-                       _sec: int = Depends(get_current_user("secretaria"))):
+def aprovar_orientador(
+    id: int,
+    db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user("secretaria"))
+):
     repo = OrientadorRepository(db)
     try:
         AprovarOrientadorUseCase(repo).execute(id)
         return {"mensagem": "Orientador aprovado com sucesso"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao aprovar orientador: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao aprovar orientador: {e}"
+        )
+
 
 @router.put("/{id}/status", status_code=status.HTTP_200_OK)
 def atualizar_status_orientador(
@@ -114,22 +201,35 @@ def atualizar_status_orientador(
 ):
     repo = OrientadorRepository(db)
     try:
-        # Chama o métod update_status do repositório para atualizar o status do orientador
         repo.update_status(id, novo_status)
         return {"mensagem": "Status do orientador atualizado com sucesso"}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))  # Orientador não encontrado
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao atualizar status do orientador: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao atualizar status do orientador: {e}"
+        )
+
 
 @router.put("/{id}/reprovar", status_code=status.HTTP_200_OK)
-def reprovar_orientador(id: int, db=Depends(get_db_conn),
-                        _sec: int = Depends(get_current_user("secretaria"))):
+def reprovar_orientador(
+    id: int,
+    db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user("secretaria"))
+):
     repo = OrientadorRepository(db)
     try:
         ReprovarOrientadorUseCase(repo).execute(id)
         return {"mensagem": "Orientador reprovado e marcado como inadimplente por 2 anos"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao reprovar orientador: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao reprovar orientador: {e}"
+        )

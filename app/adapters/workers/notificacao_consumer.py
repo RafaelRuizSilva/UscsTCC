@@ -47,9 +47,9 @@ def start_worker():
                 try:
                     data_criacao = datetime.fromisoformat(data_str)
                 except Exception:
-                    data_criacao = datetime.utcnow()
+                    data_criacao = datetime.now()
             else:
-                data_criacao = datetime.utcnow()
+                data_criacao = datetime.now()
 
             db = get_db_conn()
             try:
