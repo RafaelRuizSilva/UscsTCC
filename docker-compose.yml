@@ -8,8 +8,10 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - netinova
 
-  db:
+  db-sgpic:
     image: mysql:8.0
     container_name: mysql
     restart: always
@@ -21,6 +23,8 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - netinova
 
   api:
     build: .
@@ -32,14 +36,16 @@ services:
     ports:
       - "8001:8001"
     environment:
-      DB_HOST: db
+      DB_HOST: db-sgpic
       DB_USER: root
       DB_PASSWORD: 1404
       DB_NAME: db_uscs_ic
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     depends_on:
-      - db
+      - db-sgpic
       - rabbitmq
+    networks:
+      - netinova
 
   worker_notificacao:
     build: .
@@ -49,14 +55,20 @@ services:
       - .:/app
     working_dir: /app
     environment:
-      DB_HOST: db
+      DB_HOST: db-sgpic
       DB_USER: root
       DB_PASSWORD: 1404
       DB_NAME: db_uscs_ic
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - rabbitmq
-      - db
+      - db-sgpic
+    networks:
+      - netinova
 
 volumes:
   db_data:
+
+networks:
+  netinova:
+    external: true
