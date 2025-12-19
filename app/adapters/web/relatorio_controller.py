@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from app.core.use_cases.gerar_relatorio_alunos_usecase import GerarRelatorioAlunosUseCase
@@ -45,7 +47,7 @@ _sec: int = Depends(get_current_user(["secretaria"]))
             "nome": "Nome",
             "email": "seu_email@gmail.com",
             "cpf": "123.456.789-00",
-            "data_conclusao": "30/06/2024",
+            "data_conclusao": datetime.datetime.now().strftime('%d/%m/%Y'),
             "ciclo": "2023-2024",
         }
     ]
