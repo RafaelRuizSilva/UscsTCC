@@ -192,3 +192,24 @@ class ProjetoGateway(IProjetoGateway):
 
         finally:
             cursor.close()
+
+    def get_status_projeto(self, id_projeto: int) -> str:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT status
+                FROM tb_novo_projeto
+                WHERE id_projeto = %s LIMIT 1
+                """,
+                (id_projeto,),
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("Projeto não encontrado.")
+
+            return row[0]
+
+        finally:
+            cursor.close()

@@ -29,3 +29,11 @@ class IProjetoGateway(ABC):
     @abstractmethod
     def get_projeto_selecionado_completo_por_aluno(self, id_aluno: int) -> dict | None:
         ...
+
+    @abstractmethod
+    def get_status_projeto(self, id_projeto: int) -> str:
+        """
+        Retorna o status do projeto.
+        Ex: 'ATIVO', 'CANCELADO'
+        """
+        ...

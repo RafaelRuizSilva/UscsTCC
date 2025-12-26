@@ -2,6 +2,8 @@ from app.core.models.projeto import Projeto
 from pymysql.err import IntegrityError
 from typing import List, Dict, Optional
 import base64
+from app.core.ports.input.porta_update_projeto import UpdateProjetoCommand
+
 
 class ProjetoRepository:
 
@@ -107,6 +109,7 @@ class ProjetoRepository:
                        IF(A.mon_final_docx_file     IS NULL, 0, 1) AS has_mon_final_docx,
                        IF(A.mon_final_pdf_file      IS NULL, 0, 1) AS has_mon_final_pdf,
                        A.concluido,
+                       A.status,
                        (SELECT COUNT(*) FROM tb_projeto_aluno pa WHERE pa.id_projeto = A.id_projeto) AS total_inscritos
                   FROM tb_novo_projeto AS A
              LEFT JOIN tb_cadastro_orientador AS B ON A.id_orientador = B.id_orientador
@@ -135,7 +138,8 @@ class ProjetoRepository:
                     "has_mon_final_docx": bool(r[13]),
                     "has_mon_final_pdf": bool(r[14]),
                     "concluido": bool(r[15]),
-                    "total_inscritos": int(r[16] or 0),
+                    "status": r[16],
+                    "total_inscritos": int(r[17] or 0),
                 }
                 for r in rows
             ]
@@ -164,6 +168,7 @@ class ProjetoRepository:
              LEFT JOIN tb_cadastro_orientador AS B ON A.id_orientador = B.id_orientador
              LEFT JOIN tb_campus               AS C ON A.id_campus     = C.id_campus
                  WHERE A.id_orientador = %s
+                 AND A.status = "ATIVO"
               ORDER BY A.id_projeto DESC
                  LIMIT %s OFFSET %s
                 """,
@@ -298,7 +303,9 @@ class ProjetoRepository:
                        IF(mon_parcial_docx_file   IS NULL, 0, 1) AS has_mon_parcial_docx,
                        IF(mon_parcial_pdf_file    IS NULL, 0, 1) AS has_mon_parcial_pdf,
                        IF(mon_final_docx_file     IS NULL, 0, 1) AS has_mon_final_docx,
-                       IF(mon_final_pdf_file      IS NULL, 0, 1) AS has_mon_final_pdf
+                       IF(mon_final_pdf_file      IS NULL, 0, 1) AS has_mon_final_pdf,
+                       status,
+                       concluido
                   FROM tb_novo_projeto
                  WHERE id_projeto = %s
                  LIMIT 1
@@ -321,6 +328,8 @@ class ProjetoRepository:
                 "has_mon_parcial_pdf": bool(r[9]),
                 "has_mon_final_docx": bool(r[10]),
                 "has_mon_final_pdf": bool(r[11]),
+                "status": bool(r[12]),
+                "concluido": bool(r[13]),
             }
         finally:
             c.close()
@@ -577,6 +586,7 @@ class ProjetoRepository:
              LEFT JOIN tb_campus c               ON c.id_campus = p.id_campus
                  WHERE pa.id_aluno = %s
                    AND pa.status_aluno = TRUE
+                   AND p.status = "ATIVO"
               ORDER BY p.id_projeto DESC
                  LIMIT %s OFFSET %s
                 """,
@@ -607,5 +617,99 @@ class ProjetoRepository:
                 "total": total,
                 "items": items
             }
+        finally:
+            cursor.close()
+
+    def projeto_existe(self, id_projeto: int) -> bool:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT 1 FROM tb_novo_projeto WHERE id_projeto = %s LIMIT 1",
+                (id_projeto,),
+            )
+            return cursor.fetchone() is not None
+        finally:
+            cursor.close()
+
+    def atualizar_projeto(self, command: UpdateProjetoCommand) -> None:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                UPDATE tb_novo_projeto
+                SET cod_projeto    = %s,
+                    titulo_projeto = %s,
+                    resumo         = %s,
+                    id_orientador  = %s,
+                    id_campus      = %s,
+                    concluido      = %s
+                WHERE id_projeto = %s
+                """,
+                (
+                    command.cod_projeto,
+                    command.titulo_projeto,
+                    command.resumo,
+                    command.id_orientador,
+                    command.id_campus,
+                    command.concluido,
+                    command.id_projeto,
+                ),
+            )
+
+            if cursor.rowcount == 0:
+                raise ValueError("Nenhuma alteração realizada.")
+
+            self.db_conn.commit()
+        finally:
+            cursor.close()
+
+    def atualizar_status(self, id_projeto: int, status: str):
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                UPDATE tb_novo_projeto
+                SET status = %s
+                WHERE id_projeto = %s
+                """,
+                (status, id_projeto),
+            )
+            self.db_conn.commit()
+        finally:
+            cursor.close()
+
+    def listar_projetos_cancelados(self) -> list[dict]:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT id_projeto,
+                       cod_projeto,
+                       titulo_projeto,
+                       resumo,
+                       id_orientador,
+                       id_campus,
+                       status,
+                       concluido
+                FROM tb_novo_projeto
+                WHERE status = 'CANCELADO'
+                ORDER BY titulo_projeto
+                """
+            )
+
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id_projeto": r[0],
+                    "cod_projeto": r[1],
+                    "titulo_projeto": r[2],
+                    "resumo": r[3],
+                    "id_orientador": r[4],
+                    "id_campus": r[5],
+                    "status": r[6],
+                    "concluido": bool(r[7]),
+                }
+                for r in rows
+            ]
         finally:
             cursor.close()

@@ -27,6 +27,11 @@ class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort
         if not self.projeto_gateway.projeto_existe(id_projeto):
             raise ValueError("Projeto não encontrado.")
 
+        # 🔒 NOVO AJUSTE — validar status do projeto
+        status_projeto = self.projeto_gateway.get_status_projeto(id_projeto)
+        if status_projeto != "ATIVO":
+            raise ValueError("Não é possível alterar alunos de um projeto cancelado.")
+
         # 2) Normalizar/validar lista (remove duplicados preservando ordem)
         vistos: Set[int] = set()
         novos_unicos: List[int] = []
@@ -42,7 +47,10 @@ class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort
         # 4) Validar inscrição (selecionar só quem se inscreveu)
         if self.exigir_inscricao:
             for id_aluno in novos_unicos:
-                if not self.inscricao_repo.existe_inscricao(id_projeto=id_projeto, id_aluno=id_aluno):
+                if not self.inscricao_repo.existe_inscricao(
+                    id_projeto=id_projeto,
+                    id_aluno=id_aluno,
+                ):
                     raise ValueError(f"Aluno {id_aluno} não está inscrito neste projeto.")
 
         # 5) Buscar ativos atuais e calcular delta
@@ -52,6 +60,7 @@ class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort
         entrando = list(novos_set - ativos_atuais)
         saindo = list(ativos_atuais - novos_set)
 
+        # 6) Validar status dos alunos que estão entrando
         for id_aluno in entrando:
             status_aluno = self.aluno_repo.get_status(id_aluno)
 
@@ -62,35 +71,49 @@ class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort
                     "Somente alunos APROVADOS podem participar de projetos."
                 )
 
+        # 7) Aplicar regra de inadimplência aos que saíram
         for id_aluno in saindo:
             self.projeto_gateway.set_status_aluno(
                 id_projeto=id_projeto,
                 id_aluno=id_aluno,
-                status=False
+                status=False,
             )
 
             try:
                 self.aluno_repo.update_status(id_aluno, "INADIMPLENTE")
             except ValueError:
-                # aluno não existe mais no cadastro, ignora
+                # aluno não existe mais no cadastro
                 pass
 
-        # 6) Regra: aluno não pode ficar ATIVO em dois projetos ao mesmo tempo (opcional)
+        # 8) Regra: aluno não pode ficar ATIVO em dois projetos
         if self.impedir_duplo_ativo:
             for id_aluno in entrando:
-                if self.projeto_gateway.aluno_ativo_em_outro_projeto(id_aluno=id_aluno, id_projeto_atual=id_projeto):
-                    raise ValueError(f"Aluno {id_aluno} já está selecionado em outro projeto.")
+                if self.projeto_gateway.aluno_ativo_em_outro_projeto(
+                    id_aluno=id_aluno,
+                    id_projeto_atual=id_projeto,
+                ):
+                    raise ValueError(
+                        f"Aluno {id_aluno} já está selecionado em outro projeto."
+                    )
 
-        # 7) Aplicar mudanças (estado, sem DELETE)
+        # 9) Aplicar mudanças finais
         for id_aluno in entrando:
-            self.projeto_gateway.upsert_status_aluno(id_projeto=id_projeto, id_aluno=id_aluno, status=True)
+            self.projeto_gateway.upsert_status_aluno(
+                id_projeto=id_projeto,
+                id_aluno=id_aluno,
+                status=True,
+            )
 
         for id_aluno in saindo:
-            self.projeto_gateway.set_status_aluno(id_projeto=id_projeto, id_aluno=id_aluno, status=False)
+            self.projeto_gateway.set_status_aluno(
+                id_projeto=id_projeto,
+                id_aluno=id_aluno,
+                status=False,
+            )
 
         return {
             "id_projeto": id_projeto,
-            "selecionados": novos_unicos,   # estado final desejado
+            "selecionados": novos_unicos,
             "entraram": entrando,
             "sairam": saindo,
         }

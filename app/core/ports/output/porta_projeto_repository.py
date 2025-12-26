@@ -76,3 +76,15 @@ class IProjetoRepository(ABC):
     def list_aluno_ids_by_projeto(self, id_projeto: int) -> List[int]:
         """Retorna só os IDs dos alunos vinculados ao projeto."""
         pass
+
+    @abstractmethod
+    def projeto_existe(self, id_projeto: int) -> bool:
+        ...
+
+    @abstractmethod
+    def atualizar_projeto(self, command) -> None:
+        ...
+
+    @abstractmethod
+    def listar_projetos_cancelados(self) -> List[Dict]:
+        ...

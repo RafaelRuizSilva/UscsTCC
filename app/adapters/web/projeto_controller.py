@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, Response, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Path, UploadFile, File, Response, status
 from typing import Annotated
 
+from app.utils.file_validator import validar_pdf, validar_docx
 from app.adapters.repositories.aluno_repository import AlunoRepository
 from app.core.models.projeto import Projeto
 from app.adapters.repositories.projeto_repository import ProjetoRepository
@@ -41,10 +42,26 @@ from app.core.use_cases.atualizar_selecionados_projeto_usecase import AtualizarS
 from app.core.ports.input.porta_listar_selecionados import ListarSelecionadosQuery
 from app.core.use_cases.listar_selecionados_projeto_usecase import ListarSelecionadosProjetoUseCase
 from app.core.use_cases.get_projeto_selecionado_aluno_usecase import GetProjetoSelecionadoAlunoUseCase
+from app.core.use_cases.atualizar_projeto_usecase import AtualizarProjetoUseCase
+from app.core.ports.input.porta_update_projeto import UpdateProjetoCommand
+from typing import Optional, Union
+from app.utils.file_validator import read_file_if_not_empty
+from app.core.use_cases.ativar_projeto_usecase import AtivarProjetoUseCase
+from app.core.use_cases.cancelar_projeto_usecase import CancelarProjetoUseCase
+from app.core.use_cases.listar_projetos_cancelados_usecase import ListarProjetosCanceladosUseCase
+
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
 def get_repo(db=Depends(get_db_conn)) -> IProjetoRepository:
     return ProjetoRepository(db)
+
+class UpdateProjetoRequest(BaseModel):
+    cod_projeto: str
+    titulo_projeto: str
+    resumo: Optional[str] = None
+    id_orientador: int
+    id_campus: int
+    concluido: bool
 
 @router.get("/me")
 def get_meus_projetos(
@@ -521,3 +538,202 @@ def get_projeto_selecionado_aluno(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+def normalizar_upload(file: Union[UploadFile, str, None]) -> Optional[UploadFile]:
+    """
+    Converte string vazia em None.
+    Evita erro: Expected UploadFile, received str
+    """
+    if not file or isinstance(file, str):
+        return None
+    return file
+
+
+@router.put("/projetos/{id_projeto}")
+def atualizar_projeto(
+    id_projeto: int,
+
+    # -------- CAMPOS DO PROJETO --------
+    cod_projeto: Optional[str] = Form(None),
+    titulo_projeto: Optional[str] = Form(None),
+    resumo: Optional[str] = Form(None),
+    id_orientador: Optional[int] = Form(None),
+    id_campus: Optional[int] = Form(None),
+    concluido: Optional[bool] = Form(None),
+
+    # -------- ARQUIVOS (ACEITAM STR | NONE | UPLOADFILE) --------
+    ideia_inicial_pdf: Union[UploadFile, str, None] = File(None),
+    ideia_inicial_docx: Union[UploadFile, str, None] = File(None),
+
+    mon_parcial_docx_file: Union[UploadFile, str, None] = File(None),
+    mon_parcial_pdf_file: Union[UploadFile, str, None] = File(None),
+
+    mon_final_docx_file: Union[UploadFile, str, None] = File(None),
+    mon_final_pdf_file: Union[UploadFile, str, None] = File(None),
+
+    db=Depends(get_db_conn),
+    _sec: int = Depends(get_current_user(['orientador', "secretaria"])),
+):
+    try:
+        # -------------------------------------------------
+        # 1) NORMALIZAÇÃO (REMOVE STR VAZIA)
+        # -------------------------------------------------
+        ideia_inicial_pdf = normalizar_upload(ideia_inicial_pdf)
+        ideia_inicial_docx = normalizar_upload(ideia_inicial_docx)
+
+        mon_parcial_docx_file = normalizar_upload(mon_parcial_docx_file)
+        mon_parcial_pdf_file = normalizar_upload(mon_parcial_pdf_file)
+
+        mon_final_docx_file = normalizar_upload(mon_final_docx_file)
+        mon_final_pdf_file = normalizar_upload(mon_final_pdf_file)
+
+        # -------------------------------------------------
+        # 2) VALIDAÇÃO DE ARQUIVOS (SE EXISTIREM)
+        # -------------------------------------------------
+        if ideia_inicial_pdf:
+            validar_pdf(ideia_inicial_pdf)
+
+        if ideia_inicial_docx:
+            validar_docx(ideia_inicial_docx)
+
+        if mon_parcial_pdf_file:
+            validar_pdf(mon_parcial_pdf_file)
+
+        if mon_final_pdf_file:
+            validar_pdf(mon_final_pdf_file)
+
+        if mon_parcial_docx_file:
+            validar_docx(mon_parcial_docx_file)
+
+        if mon_final_docx_file:
+            validar_docx(mon_final_docx_file)
+
+        # -------------------------------------------------
+        # 3) BUSCAR ESTADO ATUAL DO PROJETO
+        # -------------------------------------------------
+        repo = ProjetoRepository(db)
+        projeto_atual = repo.get_by_id(id_projeto)
+        if not projeto_atual:
+            raise ValueError("Projeto não encontrado.")
+
+        # -------------------------------------------------
+        # 4) MERGE FLEXÍVEL (PUT REAL)
+        # -------------------------------------------------
+        command = UpdateProjetoCommand(
+            id_projeto=id_projeto,
+            cod_projeto=cod_projeto or projeto_atual["cod_projeto"],
+            titulo_projeto=titulo_projeto or projeto_atual["titulo_projeto"],
+            resumo=resumo if resumo is not None else projeto_atual["resumo"],
+            id_orientador=id_orientador or projeto_atual["id_orientador"],
+            id_campus=id_campus or projeto_atual["id_campus"],
+            concluido=concluido if concluido is not None else projeto_atual["concluido"],
+        )
+
+        usecase = AtualizarProjetoUseCase(repo)
+        usecase.execute(command)
+
+        # -------------------------------------------------
+        # 5) SALVAR ARQUIVOS (SE ENVIADOS)
+        # -------------------------------------------------
+        cursor = db.cursor()
+        try:
+            ideia_pdf = read_file_if_not_empty(ideia_inicial_pdf)
+            ideia_docx = read_file_if_not_empty(ideia_inicial_docx)
+
+            mon_parcial_docx = read_file_if_not_empty(mon_parcial_docx_file)
+            mon_parcial_pdf = read_file_if_not_empty(mon_parcial_pdf_file)
+
+            mon_final_docx = read_file_if_not_empty(mon_final_docx_file)
+            mon_final_pdf = read_file_if_not_empty(mon_final_pdf_file)
+
+            if ideia_pdf is not None:
+                cursor.execute(
+                    "UPDATE tb_novo_projeto SET ideia_inicial_pdf = %s WHERE id_projeto = %s",
+                    (ideia_pdf, id_projeto),
+                )
+
+            if ideia_docx is not None:
+                cursor.execute(
+                    "UPDATE tb_novo_projeto SET ideia_inicial = %s WHERE id_projeto = %s",
+                    (ideia_docx, id_projeto),
+                )
+
+            if mon_parcial_docx is not None:
+                cursor.execute(
+                    "UPDATE tb_novo_projeto SET mon_parcial_docx_file = %s WHERE id_projeto = %s",
+                    (mon_parcial_docx, id_projeto),
+                )
+
+            if mon_parcial_pdf is not None:
+                cursor.execute(
+                    "UPDATE tb_novo_projeto SET mon_parcial_pdf_file = %s WHERE id_projeto = %s",
+                    (mon_parcial_pdf, id_projeto),
+                )
+
+            if mon_final_docx is not None:
+                cursor.execute(
+                    "UPDATE tb_novo_projeto SET mon_final_docx_file = %s WHERE id_projeto = %s",
+                    (mon_final_docx, id_projeto),
+                )
+
+            if mon_final_pdf is not None:
+                cursor.execute(
+                    "UPDATE tb_novo_projeto SET mon_final_pdf_file = %s WHERE id_projeto = %s",
+                    (mon_final_pdf, id_projeto),
+                )
+
+            db.commit()
+        finally:
+            cursor.close()
+
+        return {"mensagem": "Projeto atualizado com sucesso."}
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+@router.put("/projetos/{id_projeto}/cancelar")
+def cancelar_projeto(
+    id_projeto: int,
+    db=Depends(get_db_conn),
+    secretaria_id: int = Depends(get_current_user("secretaria")),
+):
+    try:
+        repo = ProjetoRepository(db)
+        CancelarProjetoUseCase(repo).execute(id_projeto)
+        return {"mensagem": "Projeto cancelado com sucesso."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/projetos/{id_projeto}/ativar")
+def ativar_projeto(
+    id_projeto: int,
+    db=Depends(get_db_conn),
+    secretaria_id: int = Depends(get_current_user("secretaria")),
+):
+    try:
+        repo = ProjetoRepository(db)
+        AtivarProjetoUseCase(repo).execute(id_projeto)
+        return {"mensagem": "Projeto ativado com sucesso."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/projetos/cancelados")
+def listar_projetos_cancelados(
+    db=Depends(get_db_conn),
+    secretaria_id: int = Depends(get_current_user("secretaria")),
+):
+    try:
+        repo = ProjetoRepository(db)
+        usecase = ListarProjetosCanceladosUseCase(repo)
+
+        return usecase.execute()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno: {str(e)}",
+        )
