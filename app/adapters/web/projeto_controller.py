@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, Response, status
 from typing import Annotated
+
+from app.adapters.repositories.aluno_repository import AlunoRepository
 from app.core.models.projeto import Projeto
 from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.core.use_cases.create_projeto_usecase import CreateProjetoUseCase
@@ -407,10 +409,12 @@ def atualizar_selecionados(
         # --- Gateways / Repositories ---
         gateway = ProjetoGateway(db)
         inscricao_repo = InscricaoRepository(db)
+        aluno_repo = AlunoRepository(db)
 
         # --- Use case ---
         usecase = AtualizarSelecionadosProjetoUseCase(
             projeto_gateway=gateway,
+            aluno_repo=aluno_repo,
             inscricao_repo=inscricao_repo,
             max_selecionados=4,
             exigir_inscricao=True,
@@ -437,6 +441,26 @@ def atualizar_selecionados(
             titulo_projeto = row[0]
         finally:
             cursor.close()
+
+        if result["sairam"]:
+            publisher = RabbitPublisher()
+            publisher.publish(
+                {
+                    "tipo": "Aluno inadimplente",
+                    "mensagem": (
+                        f"{len(result['sairam'])} aluno(s) ficaram inadimplentes "
+                        f"após serem removidos do projeto '{titulo_projeto}'."
+                    ),
+                    "destinatario": "secretaria",
+                    "id_projeto": id_projeto,
+                    "alunos": result["sairam"],
+                }
+            )
+            try:
+                if publisher:
+                    publisher.close()
+            except Exception:
+                pass
 
         # --- Publicar notificação ---
         publisher = None
@@ -470,7 +494,9 @@ def atualizar_selecionados(
 
 
 @router.get("/{id_projeto}/selecionados")
-def listar_selecionados(id_projeto: int, db=Depends(get_db_conn)):
+def listar_selecionados(id_projeto: int, db=Depends(get_db_conn),
+                        _sec: int = Depends(get_current_user(["orientador", "secretaria"]))):
+
     try:
         gateway = ProjetoGateway(db)
         usecase = ListarSelecionadosProjetoUseCase(gateway)

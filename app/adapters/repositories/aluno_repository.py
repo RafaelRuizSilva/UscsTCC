@@ -128,10 +128,22 @@ class AlunoRepository:
                     (novo_status, aluno_id),
                 )
             self.db_conn.commit()
-            if cur.rowcount == 0:
-                raise ValueError("Aluno não encontrado.")
         finally:
             cur.close()
+
+    def get_status(self, id_aluno: int) -> str:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT status FROM tb_cadastro_aluno WHERE id_aluno = %s",
+                (id_aluno,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("Aluno não encontrado.")
+            return row[0]
+        finally:
+            cursor.close()
 
     def get_pdf_by_id(self, aluno_id: int) -> bytes | None:
         cur = self.db_conn.cursor()

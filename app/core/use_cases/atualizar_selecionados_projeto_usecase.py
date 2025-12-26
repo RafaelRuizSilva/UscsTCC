@@ -7,11 +7,13 @@ from app.core.ports.input.porta_atualizar_selecionados import (
 )
 from app.core.ports.output.porta_inscricao_repository import IInscricaoRepository
 from app.core.ports.output.porta_upd_aluno_projeto import IProjetoGateway
+from app.core.ports.output.porta_aluno_repository import IAlunoRepository
 
 
 @dataclass
 class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort):
     projeto_gateway: IProjetoGateway
+    aluno_repo: IAlunoRepository
     inscricao_repo: IInscricaoRepository
     max_selecionados: int = 4
     exigir_inscricao: bool = True
@@ -49,6 +51,29 @@ class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort
 
         entrando = list(novos_set - ativos_atuais)
         saindo = list(ativos_atuais - novos_set)
+
+        for id_aluno in entrando:
+            status_aluno = self.aluno_repo.get_status(id_aluno)
+
+            if status_aluno != "APROVADO":
+                raise ValueError(
+                    f"Aluno {id_aluno} não pode ser selecionado. "
+                    f"Status atual: {status_aluno}. "
+                    "Somente alunos APROVADOS podem participar de projetos."
+                )
+
+        for id_aluno in saindo:
+            self.projeto_gateway.set_status_aluno(
+                id_projeto=id_projeto,
+                id_aluno=id_aluno,
+                status=False
+            )
+
+            try:
+                self.aluno_repo.update_status(id_aluno, "INADIMPLENTE")
+            except ValueError:
+                # aluno não existe mais no cadastro, ignora
+                pass
 
         # 6) Regra: aluno não pode ficar ATIVO em dois projetos ao mesmo tempo (opcional)
         if self.impedir_duplo_ativo:

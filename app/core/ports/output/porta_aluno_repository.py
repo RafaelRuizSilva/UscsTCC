@@ -23,3 +23,7 @@ class IAlunoRepository(ABC):
     def update_status_many_reprovado(self, aluno_ids: Sequence[int]) -> int:
         """Marca vários alunos como REPROVADO (com inadimplente_ate +2 anos). Retorna total afetado."""
         pass
+
+    @abstractmethod
+    def get_status(self, id_aluno: int) -> str:
+        ...
