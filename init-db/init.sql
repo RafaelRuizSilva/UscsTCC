@@ -59,14 +59,37 @@ CREATE TABLE IF NOT EXISTS tb_novo_projeto (
 );
 
 CREATE TABLE IF NOT EXISTS tb_projeto_aluno (
-    id_inscricao INT AUTO_INCREMENT PRIMARY KEY,
-    id_aluno INT NOT NULL,                         
-    id_projeto INT NOT NULL,  
-    status_aluno BOOLEAN DEFAULT FALSE,                     
+    id_projeto_aluno INT AUTO_INCREMENT PRIMARY KEY,
+
+    id_aluno   INT NOT NULL,
+    id_projeto INT NOT NULL,
+
+    -- TRUE  = aluno ativo/selecionado no projeto
+    -- FALSE = aluno não ativo (histórico preservado)
+    status_aluno BOOLEAN NOT NULL DEFAULT FALSE,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY tb_projeto_aluno(id_projeto) REFERENCES tb_novo_projeto(id_projeto) ON DELETE CASCADE,
-    FOREIGN KEY (id_aluno) REFERENCES tb_cadastro_aluno(id_aluno) ON DELETE CASCADE
-);
+
+    -- garante 1 vínculo por aluno e projeto
+    CONSTRAINT uq_projeto_aluno UNIQUE (id_aluno, id_projeto),
+
+    -- chaves estrangeiras
+    CONSTRAINT fk_projeto_aluno_projeto
+        FOREIGN KEY (id_projeto)
+        REFERENCES tb_novo_projeto(id_projeto)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_projeto_aluno_aluno
+        FOREIGN KEY (id_aluno)
+        REFERENCES tb_cadastro_aluno(id_aluno)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    -- índices para performance
+    INDEX idx_projeto_status (id_projeto, status_aluno),
+    INDEX idx_aluno_status   (id_aluno, status_aluno)
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS TB_AVALIADOR_EXTERNO (
     id_avaliador INT AUTO_INCREMENT PRIMARY KEY,

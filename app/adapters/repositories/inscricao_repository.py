@@ -163,3 +163,18 @@ class InscricaoRepository(IInscricaoRepository):
         finally:
             cursor.close()
 
+    def existe_inscricao(self, id_projeto: int, id_aluno: int) -> bool:
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT 1
+                FROM tb_inscricao_projeto
+                WHERE id_projeto = %s
+                  AND id_aluno = %s LIMIT 1
+                """,
+                (id_projeto, id_aluno),
+            )
+            return cursor.fetchone() is not None
+        finally:
+            cursor.close()

@@ -31,6 +31,13 @@ from app.core.use_cases.lista_projetos_paginados_usecase import (
     ListarProjetosPorOrientadorPaginadoUseCase,
 )
 from app.core.use_cases.concluir_projeto_usecase import ConcluirProjetoUseCase
+from pydantic import BaseModel, conlist
+from typing import List
+
+from app.core.ports.input.porta_atualizar_selecionados import AtualizarSelecionadosCommand
+from app.core.use_cases.atualizar_selecionados_projeto_usecase import AtualizarSelecionadosProjetoUseCase
+from app.core.ports.input.porta_listar_selecionados import ListarSelecionadosQuery
+from app.core.use_cases.listar_selecionados_projeto_usecase import ListarSelecionadosProjetoUseCase
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
@@ -98,61 +105,6 @@ def concluir_projeto(
             detail=f"Erro ao concluir o projeto: {str(e)}"
         )
 
-
-@router.post("/update-alunos")
-def update_alunos_projeto(
-    dto: UpdateProjetoAlunosDTO,
-    db=Depends(get_db_conn),
-    orientador_id: int = Depends(get_current_user("orientador")),
-):
-    try:
-        gateway = ProjetoGateway(db)
-        inscricao_repo = InscricaoRepository(db)
-        usecase = UpdateProjetoAlunosUseCase(gateway, inscricao_repo)
-
-        usecase.execute(dto, orientador_id)
-
-        cursor = db.cursor()
-        try:
-            cursor.execute(
-                "SELECT titulo_projeto FROM tb_novo_projeto WHERE id_projeto = %s",
-                (dto.id_projeto,),
-            )
-            row = cursor.fetchone()
-
-            if row:
-                titulo_projeto = row[0]
-            else:
-                raise ValueError(f"Projeto com ID {dto.id_projeto} não encontrado.")
-
-            publisher = None
-            try:
-                publisher = RabbitPublisher()
-                publisher.publish(
-                    {
-                        "tipo": "Atualização de alunos",
-                        "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
-                        "destinatario": "secretaria",
-                    }
-                )
-            finally:
-                try:
-                    if publisher:
-                        publisher.close()
-                except Exception:
-                    pass
-        finally:
-            cursor.close()
-
-        return {"mensagem": "Alunos atualizados com sucesso"}
-    except SelecaoJaFinalizadaError as e:
-        raise HTTPException(status_code=409, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
-
-
 @router.get("/")
 def listar_projetos(
     page: int = Query(1, ge=1),
@@ -176,7 +128,6 @@ def listar_projetos(
             status_code=500,
             detail=f"Erro ao listar projetos: {str(e)}"
         )
-
 
 
 @router.get("/{id_projeto}/alunos")
@@ -440,3 +391,95 @@ def listar_projetos_do_aluno(
         page=page,
         page_size=page_size
     )
+
+
+class UpdateAlunosRequest(BaseModel):
+    id_alunos: List[int]  # ou conlist(int, max_length=4) se quiser travar no request
+
+@router.post("/{id_projeto}/selecionados")
+def atualizar_selecionados(
+    id_projeto: int,
+    body: UpdateAlunosRequest,
+    db=Depends(get_db_conn),
+    orientador_id: int = Depends(get_current_user("orientador")),
+):
+    try:
+        # --- Gateways / Repositories ---
+        gateway = ProjetoGateway(db)
+        inscricao_repo = InscricaoRepository(db)
+
+        # --- Use case ---
+        usecase = AtualizarSelecionadosProjetoUseCase(
+            projeto_gateway=gateway,
+            inscricao_repo=inscricao_repo,
+            max_selecionados=4,
+            exigir_inscricao=True,
+            impedir_duplo_ativo=True,
+        )
+
+        result = usecase.execute(
+            AtualizarSelecionadosCommand(
+                id_projeto=id_projeto,
+                id_alunos_selecionados=body.id_alunos,
+            )
+        )
+
+        # --- Buscar título do projeto (para notificação) ---
+        cursor = db.cursor()
+        try:
+            cursor.execute(
+                "SELECT titulo_projeto FROM tb_novo_projeto WHERE id_projeto = %s",
+                (id_projeto,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"Projeto com ID {id_projeto} não encontrado.")
+            titulo_projeto = row[0]
+        finally:
+            cursor.close()
+
+        # --- Publicar notificação ---
+        publisher = None
+        try:
+            publisher = RabbitPublisher()
+            publisher.publish(
+                {
+                    "tipo": "Atualização de alunos",
+                    "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
+                    "destinatario": "secretaria",
+                    "id_projeto": id_projeto,
+                    "orientador_id": orientador_id,
+                }
+            )
+        finally:
+            try:
+                if publisher:
+                    publisher.close()
+            except Exception:
+                pass
+
+        return {
+            "mensagem": "Alunos selecionados atualizados com sucesso",
+            "resultado": result,
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+
+@router.get("/{id_projeto}/selecionados")
+def listar_selecionados(id_projeto: int, db=Depends(get_db_conn)):
+    try:
+        gateway = ProjetoGateway(db)
+        usecase = ListarSelecionadosProjetoUseCase(gateway)
+
+        return usecase.execute(
+            ListarSelecionadosQuery(id_projeto=id_projeto)
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
