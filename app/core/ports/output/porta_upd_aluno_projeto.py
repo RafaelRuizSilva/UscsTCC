@@ -25,3 +25,7 @@ class IProjetoGateway(ABC):
     @abstractmethod
     def listar_alunos_ativos_detalhado(self, id_projeto: int) -> List[Dict]:
         ...
+
+    @abstractmethod
+    def get_projeto_selecionado_completo_por_aluno(self, id_aluno: int) -> dict | None:
+        ...

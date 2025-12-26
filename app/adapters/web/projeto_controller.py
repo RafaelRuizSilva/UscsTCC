@@ -40,7 +40,7 @@ from app.core.ports.input.porta_atualizar_selecionados import AtualizarSeleciona
 from app.core.use_cases.atualizar_selecionados_projeto_usecase import AtualizarSelecionadosProjetoUseCase
 from app.core.ports.input.porta_listar_selecionados import ListarSelecionadosQuery
 from app.core.use_cases.listar_selecionados_projeto_usecase import ListarSelecionadosProjetoUseCase
-
+from app.core.use_cases.get_projeto_selecionado_aluno_usecase import GetProjetoSelecionadoAlunoUseCase
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
 def get_repo(db=Depends(get_db_conn)) -> IProjetoRepository:
@@ -452,8 +452,6 @@ def atualizar_selecionados(
                         f"após serem removidos do projeto '{titulo_projeto}'."
                     ),
                     "destinatario": "secretaria",
-                    "id_projeto": id_projeto,
-                    "alunos": result["sairam"],
                 }
             )
             try:
@@ -471,8 +469,6 @@ def atualizar_selecionados(
                     "tipo": "Atualização de alunos",
                     "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
                     "destinatario": "secretaria",
-                    "id_projeto": id_projeto,
-                    "orientador_id": orientador_id,
                 }
             )
         finally:
@@ -504,6 +500,22 @@ def listar_selecionados(id_projeto: int, db=Depends(get_db_conn),
         return usecase.execute(
             ListarSelecionadosQuery(id_projeto=id_projeto)
         )
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+@router.get("/alunos/projeto-selecionado")
+def get_projeto_selecionado_aluno(
+    db=Depends(get_db_conn),
+    aluno_id: int = Depends(get_current_user("aluno")),
+):
+    try:
+        gateway = ProjetoGateway(db)
+        usecase = GetProjetoSelecionadoAlunoUseCase(gateway)
+
+        return usecase.execute(aluno_id)
 
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

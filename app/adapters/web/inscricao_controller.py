@@ -17,6 +17,7 @@ from app.adapters.repositories.projeto_repository import ProjetoRepository
 from app.adapters.repositories.orientador_repository import OrientadorRepository
 from app.dependencies.db import get_db_conn
 from app.core.use_cases.list_inscricao_por_aluno_usecase import ListarInscricoesPorAlunoUseCase
+from app.adapters.repositories.atualiza_aluno_projeto_repository import ProjetoGateway
 
 router = APIRouter(prefix="/inscricao", tags=['Inscrição'])
 
@@ -108,7 +109,8 @@ def inscrever_aluno(
             raise HTTPException(status_code=403, detail="Orientador inadimplente para novos projetos.")
 
         # 3) segue inscrição
-        use_case = CriarInscricaoUseCase(repo)
+        projeto_gateway = ProjetoGateway(db)
+        use_case = CriarInscricaoUseCase(repo, aluno_repo, projeto_gateway)
         id_inscricao = use_case.execute(id_aluno, inscricao.id_projeto)
         return {"success": True, "message": "Inscrição realizada com sucesso!",
                 "data": {"id_inscricao": id_inscricao}}
@@ -116,5 +118,5 @@ def inscrever_aluno(
         raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Erro interno no servidor")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno no servidor {e}")

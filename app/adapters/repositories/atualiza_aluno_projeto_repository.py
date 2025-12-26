@@ -124,3 +124,71 @@ class ProjetoGateway(IProjetoGateway):
             ]
         finally:
             cursor.close()
+
+    def get_projeto_selecionado_completo_por_aluno(self, id_aluno: int):
+        cursor = self.db_conn.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT A.id_projeto,
+                       A.cod_projeto,
+                       A.titulo_projeto,
+                       A.resumo,
+                       A.id_orientador,
+                       B.nome_completo                           AS orientador,
+                       B.email                                   AS orientador_email,
+                       A.id_campus,
+                       C.campus,
+
+                       IF(A.ideia_inicial IS NULL, 0, 1)         AS has_ideia_inicial,
+                       IF(A.ideia_inicial_pdf IS NULL, 0, 1)     AS has_ideia_inicial_pdf,
+                       IF(A.mon_parcial_docx_file IS NULL, 0, 1) AS has_mon_parcial_docx,
+                       IF(A.mon_parcial_pdf_file IS NULL, 0, 1)  AS has_mon_parcial_pdf,
+                       IF(A.mon_final_docx_file IS NULL, 0, 1)   AS has_mon_final_docx,
+                       IF(A.mon_final_pdf_file IS NULL, 0, 1)    AS has_mon_final_pdf,
+
+                       A.concluido,
+
+                       (SELECT COUNT(*)
+                        FROM tb_projeto_aluno pa
+                        WHERE pa.id_projeto = A.id_projeto)      AS total_inscritos
+
+                FROM tb_projeto_aluno PA
+                         JOIN tb_novo_projeto A ON A.id_projeto = PA.id_projeto
+                         JOIN tb_cadastro_orientador B ON B.id_orientador = A.id_orientador
+                         JOIN tb_campus C ON C.id_campus = A.id_campus
+
+                WHERE PA.id_aluno = %s
+                  AND PA.status_aluno = TRUE LIMIT 1
+                """,
+                (id_aluno,),
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            return {
+                "id_projeto": row[0],
+                "cod_projeto": row[1],
+                "titulo_projeto": row[2],
+                "resumo": row[3],
+                "id_orientador": row[4],
+                "orientador": row[5],
+                "orientador_email": row[6],
+                "id_campus": row[7],
+                "campus": row[8],
+
+                "has_ideia_inicial": bool(row[9]),
+                "has_ideia_inicial_pdf": bool(row[10]),
+                "has_mon_parcial_docx": bool(row[11]),
+                "has_mon_parcial_pdf": bool(row[12]),
+                "has_mon_final_docx": bool(row[13]),
+                "has_mon_final_pdf": bool(row[14]),
+
+                "concluido": bool(row[15]),
+                "total_inscritos": row[16],
+            }
+
+        finally:
+            cursor.close()
