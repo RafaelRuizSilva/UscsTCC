@@ -153,3 +153,15 @@ class BolsaRepository(IBolsaRepository):
                 raise ValueError("Aluno não encontrado.")
         finally:
             cur.close()
+
+    def remover_bolsas_por_aluno(self, id_aluno: int) -> int:
+        cursor = self.db.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM tb_bolsa WHERE id_aluno = %s",
+                (id_aluno,),
+            )
+            self.db.commit()
+            return cursor.rowcount or 0
+        finally:
+            cursor.close()

@@ -9,6 +9,7 @@ from app.core.models.secretaria import Secretaria
 from app.core.models.secretaria_login import SecretariaLogin
 from app.core.use_cases.create_secretaria_usecase import CreateSecretariaUseCase
 from app.core.use_cases.login_secretaria_usecase import LoginSecretariaUseCase
+from app.core.use_cases.listar_secretarias_usecase import ListarSecretariasUseCase
 
 router = APIRouter(prefix="/secretarias", tags=["Secretarias"])
 
@@ -51,3 +52,20 @@ def login_secretaria(
 @router.get("/painel-secretaria")
 def painel_secretaria(user_id: int = Depends(get_current_user("secretaria"))):
     return {"msg": f"Secretaria autenticada: ID {user_id}"}
+
+@router.get("/secretarias")
+def listar_secretarias(
+    db=Depends(get_db_conn),
+    secretaria_id: int = Depends(get_current_user("secretaria")),
+):
+    try:
+        repo = SecretariaRepository(db)
+        usecase = ListarSecretariasUseCase(repo)
+
+        return usecase.execute()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno: {str(e)}",
+        )

@@ -35,17 +35,28 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_co
     if not verificar_senha(senha, senha_hash):
         raise HTTPException(status_code=401, detail="Senha incorreta")
 
-    if (status_atual or "").upper() != "APROVADO":
-        raise HTTPException(status_code=403, detail="Cadastro pendente de aprovação da Secretaria.")
-    if inad_ate and inad_ate > datetime.utcnow().date():
+    status_atual = (status_atual or "").upper()
+
+    # 🔴 PRIORIDADE 1 — INADIMPLENTE
+    if status_atual == "INADIMPLENTE":
         raise HTTPException(status_code=403, detail="Usuário inadimplente no momento.")
 
-    # emita tokens **incluindo role em ambos** os tokens
+    # 🔴 PRIORIDADE 2 — REPROVADO
+    if status_atual == "REPROVADO":
+        raise HTTPException(status_code=403, detail="Cadastro reprovado pela Secretaria.")
+
+    # 🔴 PRIORIDADE 3 — NÃO APROVADO
+    if status_atual != "APROVADO":
+        raise HTTPException(status_code=403, detail="Cadastro pendente de aprovação da Secretaria.")
+
     access_token  = criar_token_acesso({"sub": str(aluno_id), "role": "aluno"})
     refresh_token = criar_token_refresh({"sub": str(aluno_id), "role": "aluno"})
 
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
-
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
 
 @router.post("/login-orientador")
 def login_orientador(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_conn)):
@@ -68,15 +79,28 @@ def login_orientador(form_data: OAuth2PasswordRequestForm = Depends(), db=Depend
     if not verificar_senha(senha, senha_hash):
         raise HTTPException(status_code=401, detail="Senha incorreta")
 
-    if (status_atual or "").upper() != "APROVADO":
-        raise HTTPException(status_code=403, detail="Cadastro pendente de aprovação da Secretaria.")
-    if inad_ate and inad_ate > datetime.utcnow().date():
+    status_atual = (status_atual or "").upper()
+
+    # 🔴 PRIORIDADE 1 — INADIMPLENTE
+    if status_atual == "INADIMPLENTE":
         raise HTTPException(status_code=403, detail="Usuário inadimplente no momento.")
+
+    # 🔴 PRIORIDADE 2 — REPROVADO
+    if status_atual == "REPROVADO":
+        raise HTTPException(status_code=403, detail="Cadastro reprovado pela Secretaria.")
+
+    # 🔴 PRIORIDADE 3 — NÃO APROVADO
+    if status_atual != "APROVADO":
+        raise HTTPException(status_code=403, detail="Cadastro pendente de aprovação da Secretaria.")
 
     access_token  = criar_token_acesso({"sub": str(orientador_id), "role": "orientador"})
     refresh_token = criar_token_refresh({"sub": str(orientador_id), "role": "orientador"})
 
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
 
 @router.post("/refresh-token")
 def refresh_token(refresh_token: str):

@@ -1,5 +1,6 @@
 from typing import List, Optional
 from datetime import date
+import uuid
 from fastapi import Query, Path, Depends, APIRouter, HTTPException
 from app.adapters.repositories.relatorio_mensal_repository import RelatorioMensalRepository
 from app.core.use_cases.confirmar_relatorio_mensal_usecase import ConfirmarRelatorioMensalUseCase
@@ -88,6 +89,7 @@ def confirmar_relatorio_mensal(
             publisher = RabbitPublisher()
             publisher.publish(
                 {
+                    "id": str(uuid.uuid4()),  # 🔥 essencial
                     "tipo": "Confirmacao - relatorio mensal",
                     "mensagem": (
                         f"{nome_orientador} enviou o relatório mensal do projeto "

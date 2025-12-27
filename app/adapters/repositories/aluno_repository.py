@@ -108,26 +108,60 @@ class AlunoRepository:
     def update_status(self, aluno_id: int, novo_status: str) -> None:
         cur = self.db_conn.cursor()
         try:
-            if str(novo_status).upper() == "REPROVADO":
-                inad_until = date.today() + timedelta(days=365*2)  # DATE
+            novo_status = str(novo_status).upper()
+
+            if novo_status == "INADIMPLENTE":
+                inad_until = date.today() + timedelta(days=365 * 2)
+
                 cur.execute(
                     """
                     UPDATE tb_cadastro_aluno
-                       SET status=%s, inadimplente_ate=%s
-                     WHERE id_aluno=%s
+                    SET status=%s,
+                        inadimplente_ate=%s
+                    WHERE id_aluno = %s
                     """,
                     (novo_status, inad_until, aluno_id),
                 )
-            else:
+
+                # 🔥 REGRA NOVA — PERDE A BOLSA
+                cur.execute(
+                    "DELETE FROM tb_bolsa WHERE id_aluno = %s",
+                    (aluno_id,),
+                )
+
+            elif novo_status == "REPROVADO":
+                inad_until = date.today() + timedelta(days=365 * 2)
+
                 cur.execute(
                     """
                     UPDATE tb_cadastro_aluno
-                       SET status=%s, inadimplente_ate=NULL
-                     WHERE id_aluno=%s
+                    SET status=%s,
+                        inadimplente_ate=%s
+                    WHERE id_aluno = %s
+                    """,
+                    (novo_status, inad_until, aluno_id),
+                )
+
+                # ❌ Reprovado também perde bolsa
+                cur.execute(
+                    "DELETE FROM tb_bolsa WHERE id_aluno = %s",
+                    (aluno_id,),
+                )
+
+            else:
+                # APROVADO / PENDENTE
+                cur.execute(
+                    """
+                    UPDATE tb_cadastro_aluno
+                    SET status=%s,
+                        inadimplente_ate=NULL
+                    WHERE id_aluno = %s
                     """,
                     (novo_status, aluno_id),
                 )
+
             self.db_conn.commit()
+
         finally:
             cur.close()
 
@@ -193,11 +227,12 @@ class AlunoRepository:
     def update_status_many_reprovado(self, aluno_ids: Sequence[int]) -> int:
         if not aluno_ids:
             return 0
+
         cur = self.db_conn.cursor()
         try:
             inad_until = date.today() + timedelta(days=365 * 2)
             placeholders = ",".join(["%s"] * len(aluno_ids))
-            # status = 'REPROVADO' e seta inadimplente_ate para todos os IDs
+
             sql = f"""
                 UPDATE tb_cadastro_aluno
                    SET status=%s, inadimplente_ate=%s
@@ -205,7 +240,15 @@ class AlunoRepository:
             """
             params = ["INADIMPLENTE", inad_until, *aluno_ids]
             cur.execute(sql, params)
+
+            # 🔥 REMOVE BOLSAS DE TODOS
+            cur.execute(
+                f"DELETE FROM tb_bolsa WHERE id_aluno IN ({placeholders})",
+                aluno_ids,
+            )
+
             self.db_conn.commit()
             return cur.rowcount or 0
+
         finally:
             cur.close()

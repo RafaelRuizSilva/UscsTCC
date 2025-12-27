@@ -16,3 +16,11 @@ class IBolsaRepository(ABC):
     def exists_any_for_aluno(self, id_aluno: int) -> bool: ...
     @abstractmethod
     def set_aluno_possui_bolsa(self, id_aluno: int, possui: bool) -> None: ...
+
+    @abstractmethod
+    def remover_bolsas_por_aluno(self, id_aluno: int) -> int:
+        """
+        Remove todas as bolsas vinculadas a um aluno.
+        Retorna quantidade removida.
+        """
+        ...

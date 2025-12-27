@@ -25,13 +25,13 @@ def verificar_senha(senha, senha_hash):
 
 def criar_token_acesso(dados: dict):
     dados_exp = dados.copy()
-    expira = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expira = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     dados_exp.update({"exp": expira})
     return jwt.encode(dados_exp, SECRET_KEY, algorithm=ALGORITHM)
 
 def criar_token_refresh(dados: dict):
     dados_exp = dados.copy()
-    expira = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expira = datetime.now() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     dados_exp.update({"exp": expira})
     return jwt.encode(dados_exp, SECRET_KEY, algorithm=ALGORITHM)
 

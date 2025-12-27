@@ -73,12 +73,6 @@ class AtualizarSelecionadosProjetoUseCase(IAtualizarSelecionadosProjetoInputPort
 
         # 7) Aplicar regra de inadimplência aos que saíram
         for id_aluno in saindo:
-            self.projeto_gateway.set_status_aluno(
-                id_projeto=id_projeto,
-                id_aluno=id_aluno,
-                status=False,
-            )
-
             try:
                 self.aluno_repo.update_status(id_aluno, "INADIMPLENTE")
             except ValueError:

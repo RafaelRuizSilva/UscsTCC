@@ -8,3 +8,7 @@ class ISecretariaRepository(ABC):
 
     @abstractmethod
     def get_by_email(self, email: str) -> Optional[Dict]: ...
+
+    @abstractmethod
+    def list_all(self) -> List[Dict]:
+        ...

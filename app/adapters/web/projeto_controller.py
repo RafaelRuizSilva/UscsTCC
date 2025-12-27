@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Path, UploadFile, File, Response, status
 from typing import Annotated
-
+import uuid
 from app.utils.file_validator import validar_pdf, validar_docx
 from app.adapters.repositories.aluno_repository import AlunoRepository
 from app.core.models.projeto import Projeto
@@ -463,6 +463,7 @@ def atualizar_selecionados(
             publisher = RabbitPublisher()
             publisher.publish(
                 {
+                    "id": str(uuid.uuid4()),  # 🔥 essencial
                     "tipo": "Aluno inadimplente",
                     "mensagem": (
                         f"{len(result['sairam'])} aluno(s) ficaram inadimplentes "
@@ -483,6 +484,7 @@ def atualizar_selecionados(
             publisher = RabbitPublisher()
             publisher.publish(
                 {
+                    "id": str(uuid.uuid4()),  # 🔥 essencial
                     "tipo": "Atualização de alunos",
                     "mensagem": f"Projeto '{titulo_projeto}' atualizado pelo orientador.",
                     "destinatario": "secretaria",

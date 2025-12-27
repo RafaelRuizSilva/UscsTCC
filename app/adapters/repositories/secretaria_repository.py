@@ -53,3 +53,29 @@ class SecretariaRepository(ISecretariaRepository):
             }
         finally:
             cursor.close()
+
+    def list_all(self) -> List[Dict]:
+        cursor = self.db_conn.cursor()
+        try:
+            query = """
+                    SELECT id_secretaria, \
+                           nome_completo, \
+                           email, \
+                           cpf
+                    FROM tb_cadastro_secretaria
+                    ORDER BY nome_completo \
+                    """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+            return [
+                {
+                    "id": r[0],
+                    "nome_completo": r[1],
+                    "email": r[2],
+                    "cpf": r[3],
+                }
+                for r in rows
+            ]
+        finally:
+            cursor.close()

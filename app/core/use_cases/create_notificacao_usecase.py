@@ -16,7 +16,7 @@ class CreateNotificacaoUseCase:
             mensagem=notificacao_data.mensagem,
             destinatario=notificacao_data.destinatario,
             lida=False,
-            data_criacao=datetime.utcnow(),
+            data_criacao=datetime.now(),
         )
         if publicar and self.publisher:
             self.publisher.publish(notificacao.dict())
