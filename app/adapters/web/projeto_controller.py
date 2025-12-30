@@ -551,7 +551,7 @@ def normalizar_upload(file: Union[UploadFile, str, None]) -> Optional[UploadFile
     return file
 
 
-@router.put("/projetos/{id_projeto}")
+@router.put("/{id_projeto}")
 def atualizar_projeto(
     id_projeto: int,
 
@@ -697,7 +697,7 @@ def atualizar_projeto(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
-@router.put("/projetos/{id_projeto}/cancelar")
+@router.put("/{id_projeto}/cancelar")
 def cancelar_projeto(
     id_projeto: int,
     db=Depends(get_db_conn),
@@ -710,7 +710,7 @@ def cancelar_projeto(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.put("/projetos/{id_projeto}/ativar")
+@router.put("/{id_projeto}/ativar")
 def ativar_projeto(
     id_projeto: int,
     db=Depends(get_db_conn),
@@ -723,7 +723,7 @@ def ativar_projeto(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/projetos/cancelados")
+@router.get("/cancelados")
 def listar_projetos_cancelados(
     db=Depends(get_db_conn),
     secretaria_id: int = Depends(get_current_user("secretaria")),
