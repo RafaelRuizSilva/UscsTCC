@@ -6,3 +6,4 @@ class AvaliadorExternoCreate(BaseModel):
     especialidade: constr(min_length=3)
     subespecialidade: constr(min_length=3)
     link_lattes: HttpUrl
+    tipo_avaliador: str

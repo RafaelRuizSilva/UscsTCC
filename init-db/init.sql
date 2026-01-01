@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS TB_AVALIADOR_EXTERNO (
     email VARCHAR(100) NOT NULL UNIQUE,
     especialidade VARCHAR(100),
     subespecialidade VARCHAR(100),
+    tipo_avaliador VARCHAR(20) NOT NULL,
     link_lattes TEXT
 );
 

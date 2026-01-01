@@ -11,16 +11,19 @@ class AvaliadorExternoRepository(IAvaliadorExternoRepository):
 
         try:
             query = """
-                INSERT INTO TB_AVALIADOR_EXTERNO (nome, email, especialidade, subespecialidade, link_lattes)
-                VALUES (%s, %s, %s, %s, %s)
-            """
+                    INSERT INTO TB_AVALIADOR_EXTERNO
+                    (nome, email, especialidade, subespecialidade, link_lattes, tipo_avaliador)
+                    VALUES (%s, %s, %s, %s, %s, %s) \
+                    """
             cursor.execute(query, (
                 avaliador.nome,
                 avaliador.email,
                 avaliador.especialidade,
                 avaliador.subespecialidade,
-                avaliador.link_lattes
+                avaliador.link_lattes,
+                avaliador.tipo_avaliador,
             ))
+
             self.db_conn.commit()
             return cursor.lastrowid
 
@@ -35,7 +38,7 @@ class AvaliadorExternoRepository(IAvaliadorExternoRepository):
         """
         cursor = self.db_conn.cursor()
         query = """
-            SELECT id_avaliador, nome, email, especialidade, subespecialidade, link_lattes
+            SELECT id_avaliador, nome, email, especialidade, subespecialidade, link_lattes, tipo_avaliador
             FROM TB_AVALIADOR_EXTERNO
             ORDER BY nome ASC
         """
@@ -51,6 +54,7 @@ class AvaliadorExternoRepository(IAvaliadorExternoRepository):
                 "especialidade": r[3],
                 "subespecialidade": r[4],
                 "link_lattes": r[5],
+                "tipo_avaliador": r[6]
             })
         return resultado
 
@@ -60,7 +64,7 @@ class AvaliadorExternoRepository(IAvaliadorExternoRepository):
         """
         cursor = self.db_conn.cursor()
         query = """
-            SELECT id_avaliador, nome, email, especialidade, subespecialidade, link_lattes
+            SELECT id_avaliador, nome, email, especialidade, subespecialidade, link_lattes, tipo_avaliador
             FROM TB_AVALIADOR_EXTERNO
             WHERE id_avaliador = %s
         """
@@ -75,6 +79,8 @@ class AvaliadorExternoRepository(IAvaliadorExternoRepository):
             "especialidade": row[3],
             "subespecialidade": row[4],
             "link_lattes": row[5],
+            "tipo_avaliador": row[6]
+
         }
 
     def update(self, id_avaliador: int, avaliador: AvaliadorExternoCreate) -> None:
@@ -84,22 +90,25 @@ class AvaliadorExternoRepository(IAvaliadorExternoRepository):
         cursor = self.db_conn.cursor()
         try:
             query = """
-                UPDATE TB_AVALIADOR_EXTERNO
-                SET nome = %s,
-                    email = %s,
-                    especialidade = %s,
-                    subespecialidade = %s,
-                    link_lattes = %s
-                WHERE id_avaliador = %s
-            """
+                    UPDATE TB_AVALIADOR_EXTERNO
+                    SET nome             = %s,
+                        email            = %s,
+                        especialidade    = %s,
+                        subespecialidade = %s,
+                        link_lattes      = %s,
+                        tipo_avaliador   = %s
+                    WHERE id_avaliador = %s \
+                    """
             cursor.execute(query, (
                 avaliador.nome,
                 avaliador.email,
                 avaliador.especialidade,
                 avaliador.subespecialidade,
                 avaliador.link_lattes,
+                avaliador.tipo_avaliador,
                 id_avaliador
             ))
+
             self.db_conn.commit()
             if cursor.rowcount == 0:
                 raise ValueError("Avaliador não encontrado.")
