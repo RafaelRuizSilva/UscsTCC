@@ -50,7 +50,7 @@ class EnviarProjetoAvaliadoresUseCase:
               </tr>
               <tr>
                 <td style="padding:24px; color:#111827; font-size:15px; line-height:1.6;">
-                  <p>Olá, avaliador(a) externo(a)!</p>
+                  <p>Olá, avaliador(a)!</p>
                   <p>Encaminhamos o projeto <strong>{escape(titulo)}</strong> para sua avaliação.</p>
                   {mensagem_html}
                   <p>O arquivo em PDF segue em anexo a este e-mail.</p>
@@ -60,7 +60,7 @@ class EnviarProjetoAvaliadoresUseCase:
               </tr>
               <tr>
                 <td style="background:#f9fafb;padding:16px 24px;color:#6b7280;font-size:12px;text-align:center;">
-                  Suporte: suporte@uscs.br
+                  Suporte: iniciacao.cientifica@online.uscs.edu.br
                 </td>
               </tr>
             </table>
