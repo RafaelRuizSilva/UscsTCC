@@ -21,7 +21,7 @@ from app.adapters.web.envio_avaliadores import router as envio_avaliadores
 from app.adapters.web.tipos_bolsa_controller import router as tipos_bolsa_controller
 
 app = FastAPI(
-    docs_url="/api/docs",
+    docs_url=None,
     openapi_url="/api/openapi.json",
 )
 

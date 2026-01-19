@@ -79,7 +79,7 @@ def painel(user_id: int = Depends(get_current_user("orientador"))):
 
 @router.get("/", response_model=List[OrientadorOut])
 def listar_todos_orientadores(db=Depends(get_db_conn),
-                              _sec: int = Depends(get_current_user(['secretaria', 'orientador']))
+                              _sec: int = Depends(get_current_user(['secretaria', 'orientador', 'aluno']))
                               ):
     repo = OrientadorRepository(db)
     try:
