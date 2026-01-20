@@ -6,7 +6,7 @@ class Destinatario:
         name: str,
         email: str,
         cpf: str,
-        data_conclusao,
+        data_conclusao: str,
         ciclo: str
     ):
         self.name = name
@@ -25,7 +25,7 @@ class Destinatario:
                 ).date()
             except ValueError:
                 raise ValueError(
-                    "data_conclusao deve ser date ou string no formato DD/MM/YYYY"
+                    f"data_conclusao deve ser date ou string no formato DD/MM/YYYY, atual em {data_conclusao}"
                 )
 
         self.data_atual = datetime.now().date()
