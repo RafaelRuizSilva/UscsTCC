@@ -25,7 +25,7 @@ class Destinatario:
                 ).date()
             except ValueError:
                 raise ValueError(
-                    f"data_conclusao deve ser date ou string no formato DD/MM/YYYY, a atual é {data_conclusao}"
+                    "data_conclusao deve ser date ou string no formato DD/MM/YYYY"
                 )
 
         self.data_atual = datetime.now().date()

@@ -9,6 +9,9 @@ class EnviaEmailUseCase(PortaEnviaEmail):
     def execute(self, file):
         qtd_emails_enviados = 0
         df = pd.read_excel(file.file)
+        for col in df.columns:
+            df[col] = df[col].astype(str)
+
         for _, row in df.iterrows():
             destinatario = Destinatario(name=row['nome'], email=row['email'],
                                         data_conclusao=row['data_conclusao'],
