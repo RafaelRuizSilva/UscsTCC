@@ -24,6 +24,10 @@ class Destinatario:
                     "%d/%m/%Y"
                 ).date()
             except ValueError:
+                self.data_conclusao = datetime.strptime(
+                    str(data_conclusao),
+                    "%Y-%m-%d"
+                ).date()
                 raise ValueError(
                     f"data_conclusao deve ser date ou string no formato DD/MM/YYYY, atual em {data_conclusao}"
                 )
