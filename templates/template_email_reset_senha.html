@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Redefinição de senha • USCS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Preheader (oculto) -->
+  <style>
+    .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; overflow:hidden; mso-hide:all; }
+    @media only screen and (max-width: 620px) {
+      .container { width:100%!important; }
+      .content { padding:24px!important; }
+      .btn { display:block!important; width:100%!important; }
+      .code { font-size:18px!important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background:#F5F7FB; font-family:Arial,Helvetica,sans-serif;">
+  <div class="preheader">Redefina sua senha. Link/token válido por {{ ttl }} minutos.</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F7FB;">
+    <tr>
+      <td align="center" style="padding:24px;">
+        <!-- Container -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="width:600px; max-width:100%; background:#ffffff; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.05); overflow:hidden; border-top:6px solid #FFB36B;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#0B1F3A; color:#ffffff; padding:22px 28px;">
+              <h1 style="margin:0; font-size:20px; letter-spacing:0.2px;">USCS • Redefinição de Senha</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="content" style="padding:32px 36px; color:#0B1F3A;">
+              <p style="margin:0 0 12px 0; font-size:16px;">
+                Olá{% if nome %}, {{ nome }}{% endif %}!
+              </p>
+              <p style="margin:0 0 16px 0; line-height:1.55; color:#2b3954;">
+                Recebemos uma solicitação para redefinir sua senha. {% if ttl %}Este pedido é válido por <strong>{{ ttl }}</strong> minutos.{% endif %}
+              </p>
+
+              {% if link %}
+              <!-- Modo COM LINK -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ link }}" class="btn"
+                       style="background:#FFB36B; color:#0B1F3A; text-decoration:none; display:inline-block; padding:12px 20px; border-radius:8px; font-weight:bold; border:1px solid #f5a25a;">
+                      Redefinir senha
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px 0; font-size:14px; color:#5b6a85;">
+                Se o botão não funcionar, copie e cole este link no navegador:
+              </p>
+              <p style="margin:0 0 16px 0; font-size:14px; word-break:break-all; color:#0B1F3A;">
+                <a href="{{ link }}" style="color:#0B1F3A; text-decoration:underline;">{{ link }}</a>
+              </p>
+              {% else %}
+              <!-- Modo SÓ TOKEN -->
+              <p style="margin:16px 0 8px 0; font-size:14px; color:#5b6a85;">
+                Use o token abaixo na página de redefinição:
+              </p>
+              <div class="code"
+                   style="display:inline-block; font-family:Consolas,Menlo,monospace; font-size:20px; letter-spacing:0.5px; color:#0B1F3A; background:#F7FAFF; border:1px dashed #cfd9ea; border-radius:8px; padding:10px 14px;">
+                {{ token }}
+              </div>
+              {% endif %}
+
+              <p style="margin:20px 0 0 0; font-size:13px; color:#5b6a85;">
+                Se você <strong>não</strong> solicitou esta alteração, pode ignorar este e-mail com segurança.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fbff; padding:18px 28px; color:#5b6a85; font-size:12px; text-align:center; border-top:1px solid #eef3fb;">
+              <p style="margin:0 0 6px 0;">
+                Suporte: <a href="mailto:{% if support_email %}{{ support_email }}{% else %}iniciacao.cientifica@online.uscs.edu.br{% endif %}"
+                            style="color:#0B1F3A; text-decoration:none;">
+                  {% if support_email %}{{ support_email }}{% else %}suporte@uscs.br{% endif %}
+                </a>
+              </p>
+              <p style="margin:0; color:#8a99b5;">
+                © {{ year or '' }} USCS — Universidade Municipal de São Caetano do Sul
+              </p>
+            </td>
+          </tr>
+        </table>
+        <!-- /Container -->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

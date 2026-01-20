@@ -1,0 +1,1 @@
+# Aqui em models, é onde eu defino minhas regras de negócio

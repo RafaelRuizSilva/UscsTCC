@@ -1,0 +1,26 @@
+# app/core/ports/output/porta_bolsa_repository.py
+from abc import ABC, abstractmethod
+from typing import List, Dict, Optional
+from app.core.models.bolsa import BolsaCreate
+
+class IBolsaRepository(ABC):
+    @abstractmethod
+    def create(self, data: BolsaCreate) -> int: ...
+    @abstractmethod
+    def delete_by_id(self, id_bolsa: int) -> int: ...
+    @abstractmethod
+    def list_all(self, limit: int, offset: int) -> List[Dict]: ...
+    @abstractmethod
+    def get_by_id(self, id_bolsa: int) -> Optional[Dict]: ...
+    @abstractmethod
+    def exists_any_for_aluno(self, id_aluno: int) -> bool: ...
+    @abstractmethod
+    def set_aluno_possui_bolsa(self, id_aluno: int, possui: bool) -> None: ...
+
+    @abstractmethod
+    def remover_bolsas_por_aluno(self, id_aluno: int) -> int:
+        """
+        Remove todas as bolsas vinculadas a um aluno.
+        Retorna quantidade removida.
+        """
+        ...

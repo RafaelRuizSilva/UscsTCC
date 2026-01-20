@@ -1,0 +1,23 @@
+from abc import ABC, abstractmethod
+
+class IInscricaoRepository(ABC):
+    @abstractmethod
+    def create(self, id_aluno: int, id_projeto: int) -> int: ...
+    
+    @abstractmethod
+    def list_all(self) -> list[dict]: ...
+    
+    @abstractmethod
+    def get_by_id(self, id_inscricao: int) -> dict | None: ...
+    
+    @abstractmethod
+    def delete(self, id_inscricao: int) -> None: ...
+    
+    @abstractmethod
+    def list_by_projeto(self, id_projeto: int) -> list[dict]: ...
+    
+    @abstractmethod
+    def list_by_aluno(self, id_aluno: int) -> list[dict]: ...
+
+    @abstractmethod
+    def existe_inscricao(self, id_projeto: int, id_aluno: int) -> bool: ...

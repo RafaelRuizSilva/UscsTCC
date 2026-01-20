@@ -1,0 +1,8 @@
+.git
+.idea
+.pytest_cache
+htmlcov
+.coverage
+venv
+**/__pycache__/
+app/configs/settings.py
