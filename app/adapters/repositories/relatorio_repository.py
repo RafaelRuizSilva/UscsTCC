@@ -47,7 +47,7 @@ class RelatorioRepository(IRelatorioRepository):
                 {
                     "nome": r[0],
                     "email": r[1],
-                    "cpf": r[2],
+                    "cpf": str(r[2]),
                     "data_conclusao": None,
                     "ciclo": None,
                 }
